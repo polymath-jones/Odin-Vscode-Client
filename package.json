@@ -10,10 +10,12 @@
     "@types/xmldom": "^0.1.31",
     "boreas": "^1.0.1",
     "core-js": "^3.6.5",
+    "one-colorpicker": "^1.0.12",
     "resize-observer-polyfill": "^1.5.1",
-    "vue": "^3.0.0",
+    "vue": "^3.2.20",
     "vue-class-component": "^8.0.0-0",
     "vue-router": "^4.0.0-0",
+    "vue3-ts-picker": "^2.0.3",
     "vuex": "^4.0.0-0",
     "xmldom": "^0.6.0"
   },

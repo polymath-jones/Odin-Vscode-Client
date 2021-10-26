@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    <ToolSpace id="opp" msg="Welcome to Your Vue.js + TypeScript App"/>
+    <ToolSpace/>
   </div>
 </template>
 

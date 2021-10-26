@@ -101,13 +101,80 @@ export class Guidespace implements Space {
     getRoot(): HTMLElement {
         return this.canvas;
     }
+    drawPaddings(elt: HTMLElement) {
+        const patternCanvas = document.createElement('canvas');
+        const patternContext = patternCanvas.getContext('2d')!;
+        patternCanvas.width = 5;
+        patternCanvas.height = 5;
+        patternContext.strokeStyle = '#0087CB'
+        patternContext.moveTo(0,0)
+        patternContext.lineTo( patternCanvas.width, patternCanvas.height);
+        patternContext.stroke();
+
+
+
+        const offset = 0.5
+        const rect = elt.getBoundingClientRect();
+        const x = Math.floor(rect.x) + offset;
+        const y = Math.floor(rect.y) + offset;
+        const w = Math.floor(rect.width);
+        const h = Math.floor(rect.height);
+
+        const style = this.root.contentWindow!.getComputedStyle(elt);
+        const left = parseInt(style.paddingLeft);
+        const right = parseInt(style.paddingRight);
+        const top = parseInt(style.paddingTop);
+        const bottom = parseInt(style.paddingBottom);
+
+        const pattern = this.context.createPattern(patternCanvas, 'repeat');
+        this.context.rect(x, y, w, h)
+        this.context.rect(x + left, y + top, w - (left + right), h - (top + bottom));
+        this.context.fillStyle = pattern!;
+        this.context.fill('evenodd');
+    }
+    drawMargins(elt: HTMLElement) {
+        const patternCanvas = document.createElement('canvas');
+        const patternContext = patternCanvas.getContext('2d')!;
+        patternCanvas.width = 3;
+        patternCanvas.height = 3;
+        patternContext.strokeStyle = '#3c865f'
+        patternContext.moveTo(patternCanvas.width,0)
+        patternContext.lineTo( 0, patternCanvas.height);
+        patternContext.stroke();
+
+
+
+        const offset = 0.5
+        const rect = elt.getBoundingClientRect();
+        const x = Math.floor(rect.x) + offset;
+        const y = Math.floor(rect.y) + offset;
+        const w = Math.floor(rect.width);
+        const h = Math.floor(rect.height);
+
+        const style = this.root.contentWindow!.getComputedStyle(elt);
+        const left = parseInt(style.marginLeft);
+        const right = parseInt(style.marginRight);
+        const top = parseInt(style.marginTop);
+        const bottom = parseInt(style.marginBottom);
+
+        const pattern = this.context.createPattern(patternCanvas, 'repeat');
+        this.context.beginPath()
+        this.context.rect(x, y, w, h)
+        this.context.rect(x - left, y - top, w + (left + right), h + (top + bottom));
+        this.context.fillStyle = pattern!;
+        this.context.fill('evenodd');
+    }
     drawSelected(elts: Array<HTMLElement>, mode: SELECTION_MODE) {
         switch (mode) {
             case SELECTION_MODE.HIGHLIGHT: {
+                //To achieve 1px lines
                 const offset = 0.5;
                 const elt = elts[0];
 
                 this.context.strokeStyle = "#178df7";
+                if(elt.getAttribute('draggable') !== 'true'){
+                    this.context.strokeStyle = "#f10e0e";
+                }
                 this.context.lineWidth = 1;
 
                 const rect = elt.getBoundingClientRect();
@@ -127,6 +194,9 @@ export class Guidespace implements Space {
                         this.context.beginPath();
                         const offset = 0;
                         this.context.strokeStyle = "#178df7";
+                        if(elt.getAttribute('draggable') !== 'true'){
+                            this.context.strokeStyle = "#f10e0e";
+                        }
                         this.context.lineWidth = 2;
 
                         const rect = elt.getBoundingClientRect();
@@ -135,6 +205,8 @@ export class Guidespace implements Space {
                         const w = Math.floor(rect.width);
                         const h = Math.floor(rect.height);
                         this.context.strokeRect(x, y, w, h);
+                        this.drawPaddings(elt);
+                        this.drawMargins(elt)
 
                     })
                 }
@@ -150,6 +222,9 @@ export class Guidespace implements Space {
 
         const offset = 0;
         this.context.strokeStyle = "#17f787";
+        if(elt.getAttribute('draggable') !== 'true'){
+            this.context.strokeStyle = "#ff9500";
+        }
         this.context.lineWidth = 2;
 
         const rect = elt.getBoundingClientRect();
@@ -168,6 +243,7 @@ export class Guidespace implements Space {
     }
 
     recalibrate() {
+        //To keep canvas rendering constant on resize
         this.canvas.width = this.root.contentDocument!.documentElement.clientWidth;
         this.canvas.height = this.root.contentDocument!.documentElement.clientHeight;
     }

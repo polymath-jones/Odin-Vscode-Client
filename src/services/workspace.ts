@@ -1,5 +1,6 @@
 import { Space } from './shared/interfaces/space';
 import { Guidespace, SELECTION_MODE, PLACEMENT_MODE } from './guidespace';
+import * as ts from 'typescript'
 import ResizeObserver from 'resize-observer-polyfill';
 import * as xmlDom from 'xmldom'
 var instance: Workspace;
@@ -22,12 +23,13 @@ export class Workspace implements Space {
         this.root = iframe;
         this.toggleAll(iframe.contentDocument!.body)
         this.registerHooks();
-        this.testXmlDom();
+        //this.testXmlDom(); 
 
     }
     testXmlDom() {
-        var vue =
-            `<template>
+        var template =
+            `
+            <template>
             <div class="hello">lasdfsdfsdfljlj</div>
             <div class="jiop">
               {{ msg }}
@@ -43,8 +45,66 @@ export class Workspace implements Space {
             </div>
           </template>
 
-          `
-        //todo: line 604 sax.js : invalid attribute
+        `
+        var script =
+            `
+        import { Options, Vue } from "vue-class-component";
+        import { Workspace } from "../services/workspace";
+        import { StyleParser } from "../services/lib/styleParser";
+        import { Guidespace, SELECTION_MODE } from "../services/guidespace";
+        import ColorPicker from "vue3-ts-picker";
+
+        @Options({
+        props: {},
+        components: {
+            ColorPicker,
+        },
+        })
+        export default class HelloWorld extends Vue {
+        styleSheet!: HTMLStyleElement;
+        root!: HTMLIFrameElement;
+        resizeObserver?: ResizeObserver;
+        styleParser!: StyleParser;
+        styleCache: Array<string> = new Array();
+        selected!: Array<HTMLElement>;
+        shiftDown = false;
+        ctrlDown = false;
+        mouseDown = false;
+        wasDragging = false;
+        wasSelecting = false;
+        start = [0, 0];
+        offset = [0, 0];
+        gs!: Guidespace;
+        currentEditable!: HTMLElement;
+        top = 0;
+        color = "";
+
+        changeColor(color: string) {
+            console.log(color);
+            if (this.selected!== undefined) {
+            this.selected.forEach((elt) => {
+                elt.classList.add("omo");
+            });
+            
+
+            this.styleParser.update(".omo", "background-color", color);
+
+            this.styleSheet.innerHTML = this.styleParser.print()
+            ? (this.styleParser.print() as string)
+            : "";
+
+            this.gs.clear();
+            this.gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
+            }
+        }
+    }
+        `
+        //compositor ast
+        var ast = ts.createSourceFile('', script, ts.ScriptTarget.Latest)
+        console.log(ast.statements)
+        console.log(ts.createPrinter().printFile(ast));
+
+        //! line 604 sax.js : invalid attribute
         let parser = xmlDom.DOMParser;
         let serializer = xmlDom.XMLSerializer;
 
@@ -53,7 +113,7 @@ export class Workspace implements Space {
         const addRegex = /(?<=<script>(\s|\S)*components:(\s)*)({)(\s*)/gm;
         const remXmlns = /[\w]*xmlns(\s|\S)*?"(\s|\S)*?"/gm;
 
-        let document = new parser().parseFromString(vue.match(templateRegex)![0], 'text/html');
+        let document = new parser().parseFromString(template.match(templateRegex)![0], 'text/html');
         let child = new parser().parseFromString(`<divo> asfasfk </divo>`);
 
 
@@ -62,6 +122,7 @@ export class Workspace implements Space {
         let root = document.getElementsByClassName("hello").item(0);
         let elts = document.getElementsByTagNameNS('*', '*')
 
+        //CCS element registration 
         for (let i = 0; i < elts.length; i++) {
             const elt = elts.item(i)
             if (elt!.tagName != 'template')
@@ -81,12 +142,8 @@ export class Workspace implements Space {
 
 
     }
-    copyStyle(source: HTMLElement, destination: HTMLElement) {
-        const style = source.style.cssText
-        destination.style.cssText = style
 
-    }
-
+    //Generate randowm ID
     generateID(): string {
         let s4 = () => {
             return Math.floor((1 + Math.random()) * 0x10000)
@@ -96,49 +153,64 @@ export class Workspace implements Space {
         var gid = s4() + s4() + "_" + s4();
         return gid;
     }
+
     getRoot(): HTMLElement {
         return this.root;
     }
 
+    /**
+   * @registerHooks attaches hooks for disabling the window context menu,
+   * resetting the guidespace on window resize, dragging and dropping elements,
+   *  highlighting on mouse over, highlighting  and placement on dragover
+   */
     registerHooks() {
 
         const iframe = this.root;
         Guidespace.init(iframe);
         var gs = Guidespace.getInstance();
-        var dragging: boolean = false;
+        var dragging = false;
+        var altDown = false;
+        var shiftDown = false;
+        var ctrlDown = false
+        var lkeyDown = false;
+        var pkeyDown = false;
         var currentDraggable: HTMLElement | undefined;
         var currentDropZoneElt: ChildNode | HTMLElement | undefined;
         var currentPlacement: PLACEMENT_MODE | undefined;
 
-
-
-
-        /**
-         * Event Hooks
-         */
         iframe.contentWindow?.focus();
+
+        //Disable context menu
         iframe.contentDocument?.body.setAttribute('oncontextmenu', 'return false');
+
+        //Resize Hook using the ResizeObserver api
         this.resizeObserver = new ResizeObserver((entries: any) => {
             console.log('window zoom level: ' + Math.round(this.getPixelRatio() * 100) + '%');
             gs.reset()
             gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
 
         });
+
+        //Observe the body's size
         this.resizeObserver.observe(iframe.contentDocument?.querySelector('body')!)
 
+        //Redraw guidespace on scroll
         iframe.contentWindow!.onscroll = (e) => {
             gs.clear()
             gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
         }
 
+        /**
+         * @ondragstart hook sets the currentDraggable to valid target
+         * and prevents default if not valid
+         */
         iframe.contentDocument!.ondragstart = (e) => {
-
+            iframe.focus()
             const elt = e.target as HTMLElement;
             if (elt.getAttribute("draggable") == "true") {
                 dragging = true;
-                console.log('drag started');
                 currentDraggable = elt
-                this.toggleDropZone(currentDraggable)
+                this.toggleDropZone(currentDraggable, false, false)
                 if (!this.selected.includes(elt)) {
                     this.selected.splice(0, this.selected.length)
                     this.selected.push(elt);
@@ -150,7 +222,9 @@ export class Workspace implements Space {
                 return false
             }
         }
-
+        /**
+         * @onmousemove hook draws highlights on hovered elements
+         */
         iframe.contentDocument!.onmousemove = (e) => {
             var elt = e.target as HTMLElement;
             if (!dragging) {
@@ -159,15 +233,23 @@ export class Workspace implements Space {
                 gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
             }
         }
-
+        /**
+         * @ondragend resets the dragging flag and toggles dropzone
+         * attribute of currentDraggable
+         */
         iframe.contentDocument!.ondragend = (e) => {
             dragging = false;
             e.stopPropagation()
             e.preventDefault()
             gs.clear()
-            this.toggleDropZone(currentDraggable!);
+            this.toggleDropZone(currentDraggable!, false, true);
         }
 
+        /**
+         * @ondrop hook inserts currentDraggable at current placement position.
+         * If alt modifier is used, currentDraggable is duplicated and inserted
+         * else it is removed from original position and inserted
+         */
         iframe.contentDocument!.ondrop = (e) => {
             e.stopPropagation()
             e.preventDefault()
@@ -178,31 +260,66 @@ export class Workspace implements Space {
             if ((currentDropZoneElt != undefined) && (currentPlacement != undefined)) {
                 switch (currentPlacement) {
                     case PLACEMENT_MODE.BEFORE: {
-                        currentDraggable?.remove()
-                        currentDropZoneElt.before(currentDraggable as Node)
+                        if (!altDown) {
+                            currentDraggable?.remove()
+                            currentDropZoneElt.before(currentDraggable as Node)
+                        }
+                        else {
+                            var elt = currentDraggable?.cloneNode(true)
+                            currentDropZoneElt.before(elt!)
+                        }
                         break;
                     }
 
                     case PLACEMENT_MODE.AFTER: {
-                        currentDraggable?.remove()
-                        currentDropZoneElt.after(currentDraggable as Node)
+                        if (!altDown) {
+                            currentDraggable?.remove()
+                            currentDropZoneElt.after(currentDraggable as Node)
+                        } else {
+                            var elt = currentDraggable?.cloneNode(true)
+                            currentDropZoneElt.after(elt!)
+                        }
                         break;
                     }
                     case PLACEMENT_MODE.INSIDE: {
-                        currentDraggable?.remove()
-                        var element = currentDropZoneElt as HTMLElement
-                        element.append(currentDraggable as Node)
+                        if (!altDown) {
+                            currentDraggable?.remove()
+                            var element = currentDropZoneElt as HTMLElement
+                            element.append(currentDraggable as Node)
+                        } else {
+                            var elt = currentDraggable?.cloneNode(true)
+                            var element = currentDropZoneElt as HTMLElement
+                            element.append(elt!)
+                        }
+                        break
+
                     }
                     case PLACEMENT_MODE.INSIDE_BEFORE: {
-                        currentDraggable?.remove()
-                        currentDropZoneElt.insertBefore((currentDraggable as Node), currentDropZoneElt.firstChild)
+                        if (!altDown) {
+                            currentDraggable?.remove()
+                            currentDropZoneElt.insertBefore((currentDraggable as Node), currentDropZoneElt.firstChild)
+
+                        }
+                        else {
+                            var elt = currentDraggable?.cloneNode(true)
+                            currentDropZoneElt.insertBefore(elt!, currentDropZoneElt.firstChild)
+
+                        }
                         break;
                     }
 
                     case PLACEMENT_MODE.INSIDE_AFTER: {
-                        currentDraggable?.remove()
-                        var element = currentDropZoneElt as HTMLElement
-                        element.append(currentDraggable as Node)
+                        if (!altDown) {
+                            currentDraggable?.remove()
+                            var element = currentDropZoneElt as HTMLElement
+                            element.append(currentDraggable as Node)
+
+                        } else {
+                            var elt = currentDraggable?.cloneNode(true)
+                            var element = currentDropZoneElt as HTMLElement
+                            element.append(elt!)
+
+                        }
                         break;
                     }
                 }
@@ -214,6 +331,11 @@ export class Workspace implements Space {
 
         iframe.contentDocument!.querySelectorAll('*').forEach((e) => {
             var elt = e as HTMLElement;
+
+            /**
+             * @ondragover hook calculates and finds valid placement positions for currentDraggable.
+             * Also draws placement and context guides using the Guidespace
+             */
             elt.ondragover = (e) => {
 
                 var isbody = false;
@@ -227,27 +349,26 @@ export class Workspace implements Space {
                 currentPlacement = undefined;
                 currentDropZoneElt = undefined;
 
-                //inside element
+                //Inside element
                 if ((mousePercents.x > threshold && mousePercents.x < 100 - threshold)
                     && (mousePercents.y > threshold && mousePercents.y < 100 - threshold) && !this.validateElement(elt)) {
 
 
-
+                    //Empty elements
                     if (elt.innerHTML == "") {
                         gs.clear()
                         gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
                         gs.drawSelected([elt], SELECTION_MODE.HIGHLIGHT)
-                        console.log('inside empty elt')
                         if (elt.getAttribute('dropzone') == 'true') {
                             currentDropZoneElt = elt
                             currentPlacement = PLACEMENT_MODE.INSIDE
                         }
                     }
+                    //Element with only text
                     else if (elt.children.length == 0) {
                         gs.clear()
                         gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
                         gs.drawSelected([elt], SELECTION_MODE.HIGHLIGHT)
-                        console.log('inside text')
 
                         mousePercents = this.getMousePercents(e, elt.getBoundingClientRect())
 
@@ -266,8 +387,9 @@ export class Workspace implements Space {
                         }
 
                     }
+                    //Inside element with child elements
                     else {
-                        console.log('inside full elt')
+
                         const closestChild = this.findClosestElement(elt, e.clientX, e.clientY)
 
                         mousePercents = this.getMousePercents(e, closestChild.getBoundingClientRect())
@@ -332,11 +454,9 @@ export class Workspace implements Space {
                     if (mousePercents.y <= mousePercents.x) {
                         //top zone
                         valid = this.findValidParent(elt, GUIDE_DIRECTION.TOP)
-                        console.log('top')
                     }
                     else {
                         //left zone
-                        console.log('left')
                         valid = this.findValidParent(elt, GUIDE_DIRECTION.LEFT)
                     }
 
@@ -390,11 +510,9 @@ export class Workspace implements Space {
                     var valid
                     if (mousePercents.y >= mousePercents.x) {
                         valid = this.findValidParent(elt, GUIDE_DIRECTION.BOTTOM)
-                        console.log('bottom')
                     }
                     else {
                         valid = this.findValidParent(elt, GUIDE_DIRECTION.RIGHT)
-                        console.log('right')
                     }
                     if (["body", "html"].includes(valid!.tagName.toLowerCase())) {
                         valid = iframe.contentDocument?.body.lastElementChild;
@@ -442,10 +560,211 @@ export class Workspace implements Space {
             }
         });
 
+
+        /**
+         * @keydown hook handles key events to set modifier
+         * flags, handle element locking and handle Parent selecting
+         */
+        iframe.contentDocument!.addEventListener(
+            "keydown",
+            (e: KeyboardEvent) => {
+
+                if (e.shiftKey && !shiftDown) {
+                    shiftDown = true;
+                } else if (e.ctrlKey && !ctrlDown) {
+                    ctrlDown = true;
+                } else if (e.altKey && !altDown) {
+                    altDown = true;
+                }
+                else if (e.key === "Delete") {
+                    this.selected.forEach(elt => elt.remove());
+                    gs.clear()
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                }
+                else if (!lkeyDown && e.key === "l") {
+                    e.preventDefault()
+                    lkeyDown = true
+
+                    //lock elements
+                    if (ctrlDown && !altDown) {
+                        this.selected.forEach(elt => {
+                            this.toggleDraggable(elt, true);
+                            this.toggleDropZone(elt, true)
+                        })
+                        gs.clear()
+                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+
+                    }
+                    //lock parent and children
+                    else if (ctrlDown && altDown) {
+                        if (this.selected.length > 1)
+                            console.log('parent locking does not work with multiselection');
+                        var elt = this.selected[0]
+                        if (elt && elt.parentElement) {
+                            this.selected[0] = elt.parentElement
+                            this.toggleDraggable(elt.parentElement, false);
+                            this.toggleDropZone(elt.parentElement, false)
+                        }
+                        gs.clear()
+                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                    }
+
+                }
+                else if (!pkeyDown && e.key === "p") {
+                    e.preventDefault()
+                    pkeyDown = true
+
+                    //parent selecting
+                    if (ctrlDown && this.selected.length == 1) {
+                        var elt = this.selected[0]
+                        if (elt && elt.parentElement) {
+                            this.selected[0] = elt.parentElement;
+                            gs.clear()
+                            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                        }
+                    }
+                }
+            }
+        );
+        /**
+         * @keyup hook handles key events to set modifier
+         * flags
+         */
+        iframe.contentDocument!.addEventListener("keyup", (e: KeyboardEvent) => {
+            if (shiftDown && !e.shiftKey) {
+                shiftDown = false;
+            } else if (!e.ctrlKey && ctrlDown) {
+                ctrlDown = false;
+            } else if (!e.altKey && altDown) {
+                altDown = false;
+            }
+            else if (lkeyDown && e.key === "l") {
+                lkeyDown = false
+            }
+            else if (pkeyDown && e.key === "p") {
+                pkeyDown = false
+            }
+        });
+
         document.ondragstart = (e) => {
             currentDraggable = e.target as HTMLElement;
             dragging = false;
         }
+
+    }
+
+    toggleDropZone(elt: HTMLElement, single: boolean, setTrue?: boolean) {
+
+        //toggle dropzone
+        if (single && setTrue == undefined) {
+
+            if (elt.hasAttribute("dropzone")) {
+                if (elt.getAttribute("dropzone") == "true")
+                    elt.setAttribute("dropzone", "toggled-false")
+                else if (elt.getAttribute("dropzone") == "toggled-false")
+                    elt.setAttribute("dropzone", "true")
+            }
+        } else if (!single && setTrue == undefined) {
+            elt.querySelectorAll("*").forEach((e) => {
+                if (e.hasAttribute("dropzone")) {
+                    if (e.getAttribute("dropzone") == "true")
+                        e.setAttribute("dropzone", "toggled-false")
+                    else if (e.getAttribute("dropzone") == "toggled-false")
+                        e.setAttribute("dropzone", "true")
+                }
+            })
+
+            if (elt.hasAttribute("dropzone")) {
+                if (elt.getAttribute("dropzone") == "true")
+                    elt.setAttribute("dropzone", "toggled-false")
+                else if (elt.getAttribute("dropzone") == "toggled-false")
+                    elt.setAttribute("dropzone", "true")
+            }
+        }
+        //turn on dropzone for one element
+        else if (single && setTrue) {
+            if (elt.hasAttribute("dropzone")) {
+                if (elt.getAttribute("dropzone") !== "true") {
+                    elt.setAttribute("dropzone", "true")
+                }
+            }
+        }
+        //turn off dropzone for one element
+        else if (single && !setTrue) {
+            if (elt.hasAttribute("dropzone")) {
+                if (elt.getAttribute("dropzone") == "true") {
+                    elt.setAttribute("dropzone", "false")
+                }
+            }
+            //turn on dropzone for element and children
+        } else if (!single && setTrue) {
+            elt.querySelectorAll("*").forEach((elt) => {
+                if (elt.hasAttribute("dropzone")) {
+                    if (elt.getAttribute("dropzone") !== "true") {
+                        elt.setAttribute("dropzone", "true")
+                    }
+                }
+            })
+
+            if (elt.hasAttribute("dropzone")) {
+                if (elt.getAttribute("dropzone") !== "true") {
+                    elt.setAttribute("dropzone", "true")
+                }
+            }
+            //turn off dropzone for element and children    
+        } else if (!single && !setTrue) {
+
+            elt.querySelectorAll("*").forEach((elt) => {
+                if (elt.hasAttribute("dropzone")) {
+                    if (elt.getAttribute("dropzone") == "true") {
+                        elt.setAttribute("dropzone", "false")
+                    }
+                }
+            })
+
+            if (elt.hasAttribute("dropzone")) {
+                if (elt.getAttribute("dropzone") == "true") {
+                    elt.setAttribute("dropzone", "false")
+                }
+            }
+        }
+    }
+
+    toggleDraggable(elt: HTMLElement, single: boolean) {
+
+        if (single) {
+            if (elt.hasAttribute("draggable")) {
+                if (elt.getAttribute("draggable") == "true")
+                    elt.setAttribute("draggable", "toggled-false")
+                else if (elt.getAttribute("draggable") == "toggled-false")
+                    elt.setAttribute("draggable", "true")
+            }
+        } else {
+            elt.querySelectorAll("*").forEach((e) => {
+                if (e.hasAttribute("draggable")) {
+                    if (e.getAttribute("draggable") == "true")
+                        e.setAttribute("draggable", "toggled-false")
+                    else if (e.getAttribute("draggable") == "toggled-false")
+                        e.setAttribute("draggable", "true")
+                }
+            })
+
+            if (elt.hasAttribute("draggable")) {
+                if (elt.getAttribute("draggable") == "true")
+                    elt.setAttribute("draggable", "toggled-false")
+                else if (elt.getAttribute("draggable") == "toggled-false")
+                    elt.setAttribute("draggable", "true")
+            }
+        }
+    }
+
+    toggleAll(elt: HTMLElement) {
+        elt.querySelectorAll("*").forEach((e) => {
+            if (!this.validateElement(e as HTMLElement)) {
+                e.setAttribute("dropzone", "true")
+                e.setAttribute("draggable", "true")
+            }
+        })
 
     }
 
@@ -483,7 +802,6 @@ export class Workspace implements Space {
             case GUIDE_DIRECTION.TOP: {
                 return elt
             }
-
 
             case GUIDE_DIRECTION.RIGHT: {
                 const parent = elt.parentElement;
@@ -528,6 +846,8 @@ export class Workspace implements Space {
 
     private getDisplayType(element: HTMLElement): string {
         var cStyle = this.root.contentWindow!.getComputedStyle(element, "");
+        if (cStyle.display == "flex" && cStyle.flexDirection == "vertical")
+            return "inline"
         return cStyle.display;
     }
 
@@ -610,48 +930,6 @@ export class Workspace implements Space {
 
     }
 
-    private toggleDropZone(elt: HTMLElement) {
-        elt.querySelectorAll("*").forEach((e) => {
-            if (e.hasAttribute("dropzone")) {
-                if (e.getAttribute("dropzone") == "true")
-                    e.setAttribute("dropzone", "toggled-false")
-                else if (e.getAttribute("dropzone") == "toggled-false")
-                    e.setAttribute("dropzone", "true")
-            }
-        })
 
-        if (elt.hasAttribute("dropzone")) {
-            if (elt.getAttribute("dropzone") == "true")
-                elt.setAttribute("dropzone", "toggled-false")
-            else if (elt.getAttribute("dropzone") == "toggled-false")
-                elt.setAttribute("dropzone", "true")
-        }
-    }
-
-    private toggleDraggable(elt: HTMLElement) {
-        elt.querySelectorAll("*").forEach((e) => {
-            if (e.hasAttribute("draggable")) {
-                if (e.getAttribute("draggable") == "true")
-                    e.setAttribute("draggable", "toggled-false")
-                else if (e.getAttribute("draggable") == "toggled-false")
-                    e.setAttribute("draggable", "true")
-            }
-        })
-
-        if (elt.hasAttribute("draggable")) {
-            if (elt.getAttribute("draggable") == "true")
-                elt.setAttribute("draggable", "toggled-false")
-            else if (elt.getAttribute("draggable") == "toggled-false")
-                elt.setAttribute("draggable", "true")
-        }
-    }
-
-    private toggleAll(elt: HTMLElement) {
-        elt.querySelectorAll("*").forEach((e) => {
-            e.setAttribute("dropzone", "true")
-            e.setAttribute("draggable", "true")
-        })
-
-    }
 
 }
