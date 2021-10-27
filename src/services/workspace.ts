@@ -672,12 +672,11 @@ export class Workspace implements Space {
                     //lock parent and children
                     else if (ctrlDown && altDown) {
                         if (this.selected.length > 1)
-                            console.log('parent locking does not work with multiselection');
+                            console.log(' locking does not work with multiselection');
                         var elt = this.selected[0]
-                        if (elt && elt.parentElement) {
-                            this.selected[0] = elt.parentElement
-                            this.toggleDraggable(elt.parentElement, false);
-                            this.toggleDropZone(elt.parentElement, false)
+                        if (elt) {
+                            this.toggleDraggable(elt, false);
+                            this.toggleDropZone(elt, false)
                         }
                         gs.clear()
                         gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
