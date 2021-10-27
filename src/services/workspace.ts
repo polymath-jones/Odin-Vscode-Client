@@ -1,5 +1,6 @@
 import { Space } from './shared/interfaces/space';
 import { Guidespace, SELECTION_MODE, PLACEMENT_MODE } from './guidespace';
+import { Project, OptionalKind, ImportDeclarationStructure, ObjectLiteralExpression, Structure, PropertyAssignment, ShorthandPropertyAssignment, ShorthandPropertyAssignmentStructure, StructureKind } from 'ts-morph';
 import * as ts from 'typescript'
 import ResizeObserver from 'resize-observer-polyfill';
 import * as xmlDom from 'xmldom'
@@ -23,7 +24,7 @@ export class Workspace implements Space {
         this.root = iframe;
         this.toggleAll(iframe.contentDocument!.body)
         this.registerHooks();
-        //this.testXmlDom(); 
+        this.testXmlDom();
 
     }
     testXmlDom() {
@@ -99,12 +100,81 @@ export class Workspace implements Space {
         }
     }
         `
-        //compositor ast
-        var ast = ts.createSourceFile('', script, ts.ScriptTarget.Latest)
-        console.log(ast.statements)
-        console.log(ts.createPrinter().printFile(ast));
 
-        //! line 604 sax.js : invalid attribute
+        //ts morph
+        let project = new Project({
+            useInMemoryFileSystem: true
+        })
+        const src = project.createSourceFile('', script);
+
+        // let node = src.getImportDeclarations()[0].getImportClause()?.getNamedImports()[0].getText()
+
+        let declaration = src.getImportDeclaration(impdec => {
+            if (impdec.getModuleSpecifierValue() == "vue3-ts-picker")
+                return true
+            return false
+        })
+
+        declaration!.remove()
+
+        const structure: ShorthandPropertyAssignmentStructure = {
+            kind: StructureKind.ShorthandPropertyAssignment,
+            name: "SomeComponent"
+        };
+
+        src.getClasses()[0].getDecorator('Options')?.getCallExpression()?.getArguments().forEach(arg => {
+            if (arg instanceof ObjectLiteralExpression) {
+                const obe = arg as ObjectLiteralExpression
+                const components = obe.getProperty("components") as PropertyAssignment
+                const initializer = components.getInitializer()
+                if (initializer instanceof ObjectLiteralExpression) {
+                    const parameters = initializer as ObjectLiteralExpression
+                    parameters.addProperty(structure)
+                    parameters.getProperty("ColorPicker")?.remove()
+                    parameters.getProperty("SomeComponent")?.remove()
+
+
+                }
+
+
+                // parameters.getProperty("ColorPicker")?.remove();
+            }
+
+        })
+
+
+        console.log(src.print());
+
+
+
+
+
+
+
+        //----------------------------------------------------------------------\\
+
+
+
+
+        //! line 604 sax.js : disable invalid attribute check
+        //! add below function to dom.js functions
+        /*
+            getElementsByAttributeValue: function(attribute,value) {
+        var pattern = new RegExp("(^|\\s)" + value + "(\\s|$)");
+        return new LiveNodeList(this, function(base) {
+            var ls = [];
+            _visitNode(base.documentElement, function(node) {
+                if(node !== base && node.nodeType == ELEMENT_NODE) {
+                    if(node.getAttribute(attribute) && pattern.test(node.getAttribute(attribute))) {
+                        ls.push(node);
+                    }
+                }
+            });
+            return ls;
+        });
+        },
+          */
+
         let parser = xmlDom.DOMParser;
         let serializer = xmlDom.XMLSerializer;
 
@@ -119,16 +189,19 @@ export class Workspace implements Space {
 
 
 
+
         let root = document.getElementsByClassName("hello").item(0);
         let elts = document.getElementsByTagNameNS('*', '*')
+        document.getElementsByTagNameNS
 
         //CCS element registration 
         for (let i = 0; i < elts.length; i++) {
             const elt = elts.item(i)
             if (elt!.tagName != 'template')
-                elt!.setAttribute('od-data-id', this.generateID())
+                elt!.setAttribute('od-data-id', 'omo')
         }
-        
+        //   console.log((document as any).getElementsByAttributeValue('od-data-id', 'omo'))
+
         let sibling = root?.childNodes.item(1);
         root?.insertBefore(child, sibling!);
         let output = new serializer().serializeToString(document!);
@@ -138,7 +211,7 @@ export class Workspace implements Space {
         // source = source.replace(addRegex, "{" + "MessageBox" + ",");
         output = output.replace(remXmlns, "");
 
-        console.log(output);
+        //   console.log(output);
 
 
     }
