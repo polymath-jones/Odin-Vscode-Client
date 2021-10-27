@@ -247,6 +247,7 @@ export class Workspace implements Space {
         var ctrlDown = false
         var lkeyDown = false;
         var pkeyDown = false;
+        var dkeyDown = false;
         var currentDraggable: HTMLElement | undefined;
         var currentDropZoneElt: ChildNode | HTMLElement | undefined;
         var currentPlacement: PLACEMENT_MODE | undefined;
@@ -697,6 +698,22 @@ export class Workspace implements Space {
                         }
                     }
                 }
+                else if (!dkeyDown && e.key === "d") {
+                    e.preventDefault()
+                    dkeyDown = true
+
+                    //parent selecting
+                    if (ctrlDown && this.selected.length == 1) {
+                        const elt = this.selected[0]
+                        if (elt && elt.parentElement) {
+                            const dup = elt.cloneNode(true)
+                            elt.after(dup)
+                            this.selected[0] = dup as HTMLElement
+                            gs.clear()
+                            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                        }
+                    }
+                }
             }
         );
         /**
@@ -716,6 +733,9 @@ export class Workspace implements Space {
             }
             else if (pkeyDown && e.key === "p") {
                 pkeyDown = false
+            }
+            else if (dkeyDown && e.key === "d") {
+                dkeyDown = false
             }
         });
 

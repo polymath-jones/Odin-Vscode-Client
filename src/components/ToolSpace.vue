@@ -404,7 +404,7 @@ input {
 .pane {
   padding: 10px;
   backdrop-filter: blur(20px) saturate(100%) contrast(100%) brightness(100%);
-  background-color: rgba(32, 32, 32, 0.884);
+  background-color: rgba(15, 15, 15, 0.884);
   border-style: solid;
   border-width: 1px;
   border-color: black;
