@@ -7,8 +7,6 @@
         @load="loaded"
         src="/in.html"
         id="workspace"
-        width="100%"
-        height="100%"
         frameborder="0"
         ref="workspace"
         style="background-color: white"
@@ -24,7 +22,7 @@
       />
       <ColorPicker
         class="color-picker"
-        @changePickerColorBen="changeColor"
+        @changePickerColorBen="backgroundColorHandler"
         :color="color"
       />
     </section>
@@ -34,9 +32,13 @@
 <script lang="ts">
 import { Options, Vue } from "vue-class-component";
 import { Workspace } from "../services/workspace";
-import { StyleParser } from "../services/lib/styleParser";
+import { StyleEditors } from "../services/shared/styleEditor";
+import { StateService } from "../services/shared/stateService";
+import { HistoryService } from "../services/shared/historyService";
 import { Guidespace, SELECTION_MODE } from "../services/guidespace";
+import { TemplateEditors } from "../services/shared/templateEditor";
 import ColorPicker from "vue3-ts-picker";
+import { h } from "@vue/runtime-core";
 
 @Options({
   props: {},
@@ -47,24 +49,26 @@ import ColorPicker from "vue3-ts-picker";
 export default class HelloWorld extends Vue {
   styleSheet!: HTMLStyleElement;
   root!: HTMLIFrameElement;
-  resizeObserver?: ResizeObserver;
-  styleParser!: StyleParser;
-  styleCache: Array<string> = new Array();
   selected!: Array<HTMLElement>;
+  currentEditable!: HTMLElement;
+
   shiftDown = false;
   altDown = false;
   ctrlDown = false;
   mouseDown = false;
   wasDragging = false;
   wasSelecting = false;
+
   start = [0, 0];
   offset = [0, 0];
-  gs!: Guidespace;
-  currentEditable!: HTMLElement;
   top = 0;
   color = "";
 
-  changeColor(color: string) {
+  stateService!: StateService;
+  historyService!: HistoryService;
+  gs!: Guidespace;
+
+  /*   changeColor(color: string) {
     if (this.selected !== undefined) {
       this.selected.forEach((elt) => {
         elt.classList.add("omo");
@@ -79,9 +83,6 @@ export default class HelloWorld extends Vue {
       this.styleSheet.innerHTML = this.styleParser.print()
         ? (this.styleParser.print() as string)
         : "";
-
-      this.gs.clear();
-      this.gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
     }
   }
   changePosition(e: InputEvent) {
@@ -100,7 +101,29 @@ export default class HelloWorld extends Vue {
     this.gs.clear();
     this.gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
   }
+ */
 
+  beforeCreate() {
+    console.log("creating");
+  }
+
+  backgroundColorHandler(color: string) {
+    if (this.selected !== undefined) {
+      this.selected.forEach((elt) => {
+        elt.classList.add("omo");
+      });
+    }
+    StyleEditors.changeColor(
+      color,
+      this.styleSheet,
+      this.stateService.getStyleParser()
+    );
+  }
+
+  beforeMount() {
+    StateService.init("");
+    this.stateService = StateService.getInstance();
+  }
   /**
    * @loaded attaches workspace hooks
    * on load and reload of the iframe
@@ -108,12 +131,23 @@ export default class HelloWorld extends Vue {
   loaded() {
     this.root = this.$refs.workspace as HTMLIFrameElement;
     Workspace.init(this.root);
+
     this.styleSheet = this.root.contentDocument!.createElement("style");
     this.root.contentDocument?.body.append(this.styleSheet);
+
     this.selected = Workspace.getInstance().selected;
-    this.styleParser = new StyleParser("");
+
     this.gs = Guidespace.getInstance();
     this.registerHooks();
+  }
+
+  walkTheDOM(start: Node, func: (node: Node) => boolean) {
+    const dive = func(start);
+    var node = dive ? start.firstChild! : start.nextSibling;
+    while (node) {
+      this.walkTheDOM(node, func);
+      node = node.nextSibling!;
+    }
   }
 
   /**
@@ -122,20 +156,6 @@ export default class HelloWorld extends Vue {
    * element positioning, and keyboard key mappings
    */
   registerHooks() {
-    /**
-     * @styleparser provides helper functions for
-     * editing the CSSOM or CSS AST of a component style data
-     */
-    this.styleParser.create(
-      undefined,
-      ".omo",
-      `{ 
-        position:relative;
-        top:initial; 
-        left:initial;
-        background-color: initial;
-      }`
-    );
     /**
      * @dbclick hook sets the contenteditable attribute
      * of an element to true
@@ -245,19 +265,17 @@ export default class HelloWorld extends Vue {
       (event: MouseEvent) => {
         if (this.mouseDown) {
           this.mouseDown = false;
+
           if (this.wasDragging) {
             this.wasDragging = false;
           } else if (this.wasSelecting) {
             this.wasSelecting = false;
             this.selected.splice(0, this.selected.length);
-            this.root.contentDocument!.querySelectorAll("*").forEach((e) => {
-              var elt = e as HTMLElement;
 
-              if (
-                !["body", "html"].includes(elt.tagName.toLowerCase()) &&
-                elt != this.gs.getRoot()
-              ) {
-                const elt = e as HTMLElement;
+            this.walkTheDOM(this.root.contentDocument?.body as Node, (node) => {
+              const elt = node as HTMLElement;
+
+              if (elt != this.gs.getRoot()) {
                 const rect = elt.getBoundingClientRect();
                 var x = this.start[0];
                 var y = this.start[1];
@@ -286,9 +304,12 @@ export default class HelloWorld extends Vue {
                 ) {
                   this.selected.push(elt);
                 }
-              }
-            });
 
+                return false;
+              }
+
+              return true;
+            });
             this.gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
           }
           this.start = [];
@@ -296,7 +317,7 @@ export default class HelloWorld extends Vue {
       }
     );
 
-    /** @mousedown hook gets starting position data for multiselection
+    /** @mousemove hook gets current position data for multiselection
      * overlay and
      * !experimental positioning with shift modifier
      */
@@ -314,13 +335,13 @@ export default class HelloWorld extends Vue {
           var delY = e.clientY - this.start[1];
 
           this.top = delY;
-          this.styleParser.update(".omo", "left", delX + "px");
+          /*  this.styleParser.update(".omo", "left", delX + "px");
           this.styleParser.update(".omo", "top", delY + "px");
 
           //todo:should be a function
           this.styleSheet.innerHTML = this.styleParser.print()
             ? (this.styleParser.print() as string)
-            : "";
+            : ""; */
         } else if (this.mouseDown && this.ctrlDown) {
           this.wasSelecting = true;
           this.gs.clear();
@@ -388,6 +409,7 @@ export default class HelloWorld extends Vue {
 }
 #workspace {
   border: none;
+  height: 100%;
 }
 input {
   padding: 50px;
@@ -418,6 +440,7 @@ input {
   display: flex;
   flex-flow: column;
   height: 100%;
+  width: calc(100vw - 480px);
   z-index: 99;
 }
 .top-pane {

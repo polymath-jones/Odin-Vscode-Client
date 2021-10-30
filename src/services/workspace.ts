@@ -1,9 +1,10 @@
 import { Space } from './shared/interfaces/space';
 import { Guidespace, SELECTION_MODE, PLACEMENT_MODE } from './guidespace';
-import { Project, OptionalKind, ImportDeclarationStructure, ObjectLiteralExpression, Structure, PropertyAssignment, ShorthandPropertyAssignment, ShorthandPropertyAssignmentStructure, StructureKind } from 'ts-morph';
-import * as ts from 'typescript'
+import { Project, ObjectLiteralExpression, PropertyAssignment, ShorthandPropertyAssignmentStructure, StructureKind } from 'ts-morph';
+import { TemplateEditors } from './shared/templateEditor'
 import ResizeObserver from 'resize-observer-polyfill';
 import * as xmlDom from 'xmldom'
+import { HistoryService, OPERTATION_MODE, OPERTATION_TYPE, State } from './shared/historyService';
 var instance: Workspace;
 
 
@@ -15,6 +16,7 @@ export class Workspace implements Space {
 
     root: HTMLIFrameElement;
     resizeObserver?: ResizeObserver;
+    historyService: HistoryService;
     selected: Array<HTMLElement> = new Array();
     private dz = require("./lib/detect-zoom");
 
@@ -22,9 +24,12 @@ export class Workspace implements Space {
     private constructor(iframe: HTMLIFrameElement) {
 
         this.root = iframe;
+        this.historyService = HistoryService.getInstance()
         this.toggleAll(iframe.contentDocument!.body)
         this.registerHooks();
-        this.testXmlDom();
+
+
+        //this.testXmlDom();
 
     }
     testXmlDom() {
@@ -107,8 +112,7 @@ export class Workspace implements Space {
         })
         const src = project.createSourceFile('', script);
 
-        // let node = src.getImportDeclarations()[0].getImportClause()?.getNamedImports()[0].getText()
-
+        //get import statement declaration from "module specifier"
         let declaration = src.getImportDeclaration(impdec => {
             if (impdec.getModuleSpecifierValue() == "vue3-ts-picker")
                 return true
@@ -117,11 +121,12 @@ export class Workspace implements Space {
 
         declaration!.remove()
 
+        //add new component to component objects
         const structure: ShorthandPropertyAssignmentStructure = {
             kind: StructureKind.ShorthandPropertyAssignment,
             name: "SomeComponent"
         };
-
+        //edit component object
         src.getClasses()[0].getDecorator('Options')?.getCallExpression()?.getArguments().forEach(arg => {
             if (arg instanceof ObjectLiteralExpression) {
                 const obe = arg as ObjectLiteralExpression
@@ -132,8 +137,6 @@ export class Workspace implements Space {
                     parameters.addProperty(structure)
                     parameters.getProperty("ColorPicker")?.remove()
                     parameters.getProperty("SomeComponent")?.remove()
-
-
                 }
 
 
@@ -216,6 +219,18 @@ export class Workspace implements Space {
 
     }
 
+    scaleWorkspace(width: number) {
+        const root = this.root;
+        const rect = root.getBoundingClientRect()
+        const scale = rect.width / width;
+    
+        root.style.transform = `scale(${scale})`;
+        root.style.transformOrigin = `0px 0px`;
+    
+        root.style.minWidth = width + "px";
+        root.style.minHeight = rect.height / scale + "px";
+      }
+
     //Generate randowm ID
     generateID(): string {
         let s4 = () => {
@@ -234,7 +249,7 @@ export class Workspace implements Space {
     /**
    * @registerHooks attaches hooks for disabling the window context menu,
    * resetting the guidespace on window resize, dragging and dropping elements,
-   *  highlighting on mouse over, highlighting  and placement on dragover
+   * highlighting on mouse over, highlighting  and placement on dragover
    */
     registerHooks() {
 
@@ -259,9 +274,13 @@ export class Workspace implements Space {
 
         //Resize Hook using the ResizeObserver api
         this.resizeObserver = new ResizeObserver((entries: any) => {
-            console.log('window zoom level: ' + Math.round(this.getPixelRatio() * 100) + '%');
-            gs.reset()
-            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+            // this.scaleWorkspace(2000)
+            const zoomRatio = this.getPixelRatio()
+            const optimize = zoomRatio < 1
+            console.log('window zoom level: ' + Math.round(zoomRatio * 100) + '%');
+
+            gs.reset(optimize)
+            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)    
 
         });
 
@@ -329,74 +348,21 @@ export class Workspace implements Space {
             e.preventDefault()
             gs.clear()
 
-            // const candrop = currentDropZoneContext?.hasAttribute('dropzone') && currentDropZoneElt?.parentElement?.getAttribute('dropzone') == "true"
-
             if ((currentDropZoneElt != undefined) && (currentPlacement != undefined)) {
-                switch (currentPlacement) {
-                    case PLACEMENT_MODE.BEFORE: {
-                        if (!altDown) {
-                            currentDraggable?.remove()
-                            currentDropZoneElt.before(currentDraggable as Node)
-                        }
-                        else {
-                            var elt = currentDraggable?.cloneNode(true)
-                            currentDropZoneElt.before(elt!)
-                        }
-                        break;
-                    }
 
-                    case PLACEMENT_MODE.AFTER: {
-                        if (!altDown) {
-                            currentDraggable?.remove()
-                            currentDropZoneElt.after(currentDraggable as Node)
-                        } else {
-                            var elt = currentDraggable?.cloneNode(true)
-                            currentDropZoneElt.after(elt!)
-                        }
-                        break;
-                    }
-                    case PLACEMENT_MODE.INSIDE: {
-                        if (!altDown) {
-                            currentDraggable?.remove()
-                            var element = currentDropZoneElt as HTMLElement
-                            element.append(currentDraggable as Node)
-                        } else {
-                            var elt = currentDraggable?.cloneNode(true)
-                            var element = currentDropZoneElt as HTMLElement
-                            element.append(elt!)
-                        }
-                        break
+                console.log(altDown);
 
-                    }
-                    case PLACEMENT_MODE.INSIDE_BEFORE: {
-                        if (!altDown) {
-                            currentDraggable?.remove()
-                            currentDropZoneElt.insertBefore((currentDraggable as Node), currentDropZoneElt.firstChild)
+                let source: HTMLElement
+                if (altDown)
+                    source = currentDraggable?.cloneNode(true) as HTMLElement
+                else
+                    source = currentDraggable as HTMLElement
 
-                        }
-                        else {
-                            var elt = currentDraggable?.cloneNode(true)
-                            currentDropZoneElt.insertBefore(elt!, currentDropZoneElt.firstChild)
+                if (!altDown) this.saveDomUpdateToHistory(currentDropZoneElt as HTMLElement, source, currentPlacement)
+                else this.saveDomCreateToHistory(currentDropZoneElt as HTMLElement, source, currentPlacement)
 
-                        }
-                        break;
-                    }
+                TemplateEditors.placeInDOM(currentDropZoneElt, source!, currentPlacement, altDown)
 
-                    case PLACEMENT_MODE.INSIDE_AFTER: {
-                        if (!altDown) {
-                            currentDraggable?.remove()
-                            var element = currentDropZoneElt as HTMLElement
-                            element.append(currentDraggable as Node)
-
-                        } else {
-                            var elt = currentDraggable?.cloneNode(true)
-                            var element = currentDropZoneElt as HTMLElement
-                            element.append(elt!)
-
-                        }
-                        break;
-                    }
-                }
                 currentPlacement = undefined;
                 currentDropZoneElt = undefined;
             }
@@ -633,87 +599,99 @@ export class Workspace implements Space {
 
             }
         });
-
-
         /**
          * @keydown hook handles key events to set modifier
          * flags, handle element locking and handle Parent selecting
          */
-        iframe.contentDocument!.addEventListener(
-            "keydown",
-            (e: KeyboardEvent) => {
+        iframe.contentDocument!.addEventListener("keydown", (e: KeyboardEvent) => {
 
-                if (e.shiftKey && !shiftDown) {
-                    shiftDown = true;
-                } else if (e.ctrlKey && !ctrlDown) {
-                    ctrlDown = true;
-                } else if (e.altKey && !altDown) {
-                    altDown = true;
+            if (e.shiftKey && !shiftDown) {
+                shiftDown = true;
+            } else if (e.ctrlKey && !ctrlDown) {
+                ctrlDown = true;
+            } else if (e.altKey && !altDown) {
+                altDown = true;
+            }
+            else if (e.key === "Delete") {
+                this.selected.forEach(elt => {
+                    this.saveDomDeleteToHistory(elt)
+                    TemplateEditors.deleteInDOM(elt)
+                });
+                gs.clear()
+                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+            }
+            else if (e.key === "z" && ctrlDown) {
+                e.preventDefault()
+                if (altDown) {
+                    this.historyService.redo()
                 }
-                else if (e.key === "Delete") {
-                    this.selected.forEach(elt => elt.remove());
+                else
+                    this.historyService.undo()
+                gs.clear()
+                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+
+
+            }
+            else if (!lkeyDown && e.key === "l") {
+                e.preventDefault()
+                lkeyDown = true
+
+                if (ctrlDown && !altDown) {
+                    this.selected.forEach(elt => {
+                        this.toggleDraggable(elt, true);
+                        this.toggleDropZone(elt, true)
+                    })
+                    gs.clear()
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+
+                }
+                //lock element and children
+                else if (ctrlDown && altDown) {
+                    if (this.selected.length > 1)
+                        console.log(' locking does not work with multiselection');
+                    var elt = this.selected[0]
+                    if (elt) {
+                        this.toggleDraggable(elt, false);
+                        this.toggleDropZone(elt, false)
+                    }
                     gs.clear()
                     gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
                 }
-                else if (!lkeyDown && e.key === "l") {
-                    e.preventDefault()
-                    lkeyDown = true
 
-                    //lock elements
-                    if (ctrlDown && !altDown) {
-                        this.selected.forEach(elt => {
-                            this.toggleDraggable(elt, true);
-                            this.toggleDropZone(elt, true)
-                        })
+            }
+            else if (!pkeyDown && e.key === "p") {
+                e.preventDefault()
+                pkeyDown = true
+
+                //parent selecting
+                if (ctrlDown && this.selected.length == 1) {
+                    var elt = this.selected[0]
+                    if (elt && elt.parentElement) {
+                        this.selected[0] = elt.parentElement;
                         gs.clear()
                         gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-
-                    }
-                    //lock parent and children
-                    else if (ctrlDown && altDown) {
-                        if (this.selected.length > 1)
-                            console.log(' locking does not work with multiselection');
-                        var elt = this.selected[0]
-                        if (elt) {
-                            this.toggleDraggable(elt, false);
-                            this.toggleDropZone(elt, false)
-                        }
-                        gs.clear()
-                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                    }
-
-                }
-                else if (!pkeyDown && e.key === "p") {
-                    e.preventDefault()
-                    pkeyDown = true
-
-                    //parent selecting
-                    if (ctrlDown && this.selected.length == 1) {
-                        var elt = this.selected[0]
-                        if (elt && elt.parentElement) {
-                            this.selected[0] = elt.parentElement;
-                            gs.clear()
-                            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                        }
-                    }
-                }
-                else if (!dkeyDown && e.key === "d") {
-                    e.preventDefault()
-                    dkeyDown = true
-
-                    //parent selecting
-                    if (ctrlDown && this.selected.length == 1) {
-                        const elt = this.selected[0]
-                        if (elt && elt.parentElement) {
-                            const dup = elt.cloneNode(true)
-                            elt.after(dup)
-                            this.selected[0] = dup as HTMLElement
-                            gs.clear()
-                            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                        }
                     }
                 }
             }
+            else if (!dkeyDown && e.key === "d") {
+                e.preventDefault()
+                dkeyDown = true
+
+                //duplicate element
+                if (ctrlDown) {
+                    this.selected.forEach(elt => {
+                        if (elt && elt.parentElement) {
+                            const dup = elt.cloneNode(true)
+                            this.saveDomCreateToHistory(elt, dup as HTMLElement, PLACEMENT_MODE.AFTER)
+                            elt.after(dup)
+
+                        }
+                    })
+                }
+                gs.clear()
+                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+            }
+        }
         );
         /**
          * @keyup hook handles key events to set modifier
@@ -728,21 +706,252 @@ export class Workspace implements Space {
                 altDown = false;
             }
             else if (lkeyDown && e.key === "l") {
-                lkeyDown = false
+                lkeyDown = false;
             }
             else if (pkeyDown && e.key === "p") {
-                pkeyDown = false
+                pkeyDown = false;
             }
             else if (dkeyDown && e.key === "d") {
-                dkeyDown = false
+                dkeyDown = false;
             }
         });
+    }
 
-        document.ondragstart = (e) => {
-            currentDraggable = e.target as HTMLElement;
-            dragging = false;
+    saveDomUpdateToHistory(relative: HTMLElement, element: HTMLElement, mode: PLACEMENT_MODE) {
+        switch (mode) {
+            case PLACEMENT_MODE.BEFORE: {
+
+                const previousSibling = element.nextElementSibling
+                const previousParent = element.parentElement
+                const state: State = {
+                    operationType: OPERTATION_TYPE.DOM,
+                    operationMode: OPERTATION_MODE.UPDATE,
+                    operands: {
+                        element: element,
+                        previousSibling: previousSibling,
+                        previousParent: previousParent,
+                        parent: undefined,
+                        sibling: relative,
+                    }
+                }
+                this.historyService.push(state)
+
+            }
+
+                break;
+
+
+            case PLACEMENT_MODE.AFTER: {
+                const previousSibling = element.nextElementSibling
+                const previousParent = element.parentElement
+                const parent = relative.parentElement
+                const sibling = relative.nextElementSibling
+
+                const state: State = {
+                    operationType: OPERTATION_TYPE.DOM,
+                    operationMode: OPERTATION_MODE.UPDATE,
+                    operands: {
+                        element: element,
+                        previousSibling: previousSibling,
+                        previousParent: previousParent,
+                        parent: parent,
+                        sibling: sibling,
+                    }
+                }
+                this.historyService.push(state)
+
+
+                break;
+            }
+            case PLACEMENT_MODE.INSIDE: {
+                const previousSibling = element.nextElementSibling
+                const previousParent = element.parentElement
+                const state: State = {
+                    operationType: OPERTATION_TYPE.DOM,
+                    operationMode: OPERTATION_MODE.UPDATE,
+                    operands: {
+                        element: element,
+                        previousSibling: previousSibling,
+                        previousParent: previousParent,
+                        parent: relative,
+                        sibling: undefined,
+                    }
+                }
+                this.historyService.push(state)
+
+
+                break
+
+            }
+            case PLACEMENT_MODE.INSIDE_BEFORE: {
+
+                const previousSibling = element.nextElementSibling
+                const previousParent = element.parentElement
+                const sibling = relative.firstElementChild
+
+                const state: State = {
+                    operationType: OPERTATION_TYPE.DOM,
+                    operationMode: OPERTATION_MODE.UPDATE,
+                    operands: {
+                        element: element,
+                        previousSibling: previousSibling,
+                        previousParent: previousParent,
+                        parent: undefined,
+                        sibling: sibling,
+                    }
+                }
+                this.historyService.push(state)
+
+            }
+
+
+                break;
+
+
+            case PLACEMENT_MODE.INSIDE_AFTER: {
+                const previousSibling = element.nextElementSibling
+                const previousParent = element.parentElement
+                const state: State = {
+                    operationType: OPERTATION_TYPE.DOM,
+                    operationMode: OPERTATION_MODE.UPDATE,
+                    operands: {
+                        element: element,
+                        previousSibling: previousSibling,
+                        previousParent: previousParent,
+                        parent: relative,
+                        sibling: undefined,
+                    }
+                }
+                this.historyService.push(state)
+
+
+
+                break;
+            }
         }
+    }
 
+    saveDomDeleteToHistory(element: HTMLElement) {
+        const previousSibling = element.nextElementSibling
+        const previousParent = element.parentElement
+        const state: State = {
+            operationType: OPERTATION_TYPE.DOM,
+            operationMode: OPERTATION_MODE.DELETE,
+            operands: {
+                element: element,
+                previousSibling: previousSibling,
+                previousParent: previousParent,
+                parent: undefined,
+                sibling: undefined,
+            }
+        }
+        this.historyService.push(state)
+    }
+
+    saveDomCreateToHistory(relative: HTMLElement, element: HTMLElement, mode: PLACEMENT_MODE) {
+        switch (mode) {
+            case PLACEMENT_MODE.BEFORE: {
+
+                const state: State = {
+                    operationType: OPERTATION_TYPE.DOM,
+                    operationMode: OPERTATION_MODE.CREATE,
+                    operands: {
+                        element: element,
+                        previousSibling: undefined,
+                        previousParent: undefined,
+                        parent: undefined,
+                        sibling: relative,
+                    }
+                }
+                this.historyService.push(state)
+
+            }
+
+                break;
+
+
+            case PLACEMENT_MODE.AFTER: {
+                const parent = relative.parentElement
+                const sibling = relative.nextElementSibling
+
+                const state: State = {
+                    operationType: OPERTATION_TYPE.DOM,
+                    operationMode: OPERTATION_MODE.CREATE,
+                    operands: {
+                        element: element,
+                        previousSibling: undefined,
+                        previousParent: undefined,
+                        parent: parent,
+                        sibling: sibling,
+                    }
+                }
+                this.historyService.push(state)
+
+
+                break;
+            }
+            case PLACEMENT_MODE.INSIDE: {
+
+                const state: State = {
+                    operationType: OPERTATION_TYPE.DOM,
+                    operationMode: OPERTATION_MODE.CREATE,
+                    operands: {
+                        element: element,
+                        previousSibling: undefined,
+                        previousParent: undefined,
+                        parent: relative,
+                        sibling: undefined,
+                    }
+                }
+                this.historyService.push(state)
+
+
+                break
+
+            }
+            case PLACEMENT_MODE.INSIDE_BEFORE: {
+
+                const sibling = relative.firstElementChild
+
+                const state: State = {
+                    operationType: OPERTATION_TYPE.DOM,
+                    operationMode: OPERTATION_MODE.CREATE,
+                    operands: {
+                        element: element,
+                        previousSibling: undefined,
+                        previousParent: undefined,
+                        parent: undefined,
+                        sibling: sibling,
+                    }
+                }
+                this.historyService.push(state)
+
+            }
+
+
+                break;
+
+
+            case PLACEMENT_MODE.INSIDE_AFTER: {
+
+                const state: State = {
+                    operationType: OPERTATION_TYPE.DOM,
+                    operationMode: OPERTATION_MODE.CREATE,
+                    operands: {
+                        element: element,
+                        previousSibling: undefined,
+                        previousParent: undefined,
+                        parent: relative,
+                        sibling: undefined,
+                    }
+                }
+                this.historyService.push(state)
+
+
+
+                break;
+            }
+        }
     }
 
     toggleDropZone(elt: HTMLElement, single: boolean, setTrue?: boolean) {
@@ -861,20 +1070,21 @@ export class Workspace implements Space {
     }
 
     static init(window: HTMLIFrameElement) {
-        if (!instance)
-            instance = new Workspace(window);
-        else
-            instance = new Workspace(window);
+        instance = new Workspace(window);
     }
 
     static getInstance(): Workspace {
         if (instance != undefined) {
-            console.log('Returning same instance');
             return instance
         }
         else
             throw Error('Workspace not instantiated');
     }
+
+    /**
+     * Workspace on drag over uitility funcitions
+     * 
+     *  */
 
     private calculateDistance(x: number, y: number, mouseX: number, mouseY: number): number {
         return Math.sqrt(Math.pow(x - mouseX, 2) + Math.pow(y - mouseY, 2));
@@ -1021,7 +1231,5 @@ export class Workspace implements Space {
         return closestElt!;
 
     }
-
-
 
 }

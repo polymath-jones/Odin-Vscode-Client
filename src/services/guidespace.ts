@@ -16,7 +16,7 @@ export class Guidespace implements Space {
     root: HTMLIFrameElement;
     private canvas: HTMLCanvasElement;
     private context: CanvasRenderingContext2D;
-
+    private optimize = false;
 
 
     private constructor(iframe: HTMLIFrameElement) {
@@ -32,8 +32,9 @@ export class Guidespace implements Space {
         if (box.length == 4) {
             this.context.strokeStyle = "#ffff0f";
             this.context.fillStyle = "#ffff0f";
-            const offset = 0.5;
-            this.context.lineWidth = 1;
+            const offset = this.optimize ? 0 : 0.5;
+            this.context.lineWidth = this.optimize ? 2 : 1;
+
             const x = Math.floor(box[0]) + offset
             const y = Math.floor(box[1]) + offset
             const w = Math.floor(box[2] - box[0])
@@ -51,11 +52,11 @@ export class Guidespace implements Space {
             this.drawContext(elt)
         else
             this.drawContext(elt.parentElement!)
-        const offset = 0.5;
+
+        const offset = this.optimize ? 0 : 0.5;
+        this.context.lineWidth = this.optimize ? 2 : 1;
+
         this.context.strokeStyle = "#178df7";
-
-        this.context.lineWidth = 1;
-
         const rect = elt.getBoundingClientRect();
         const x = Math.floor(rect.x) + offset;
         const y = Math.floor(rect.y) + offset;
@@ -168,14 +169,16 @@ export class Guidespace implements Space {
         switch (mode) {
             case SELECTION_MODE.HIGHLIGHT: {
                 //To achieve 1px lines
-                const offset = 0.5;
+                
                 const elt = elts[0];
 
                 this.context.strokeStyle = "#178df7";
                 if (elt.getAttribute('draggable') !== 'true') {
                     this.context.strokeStyle = "#f10e0e";
                 }
-                this.context.lineWidth = 1;
+                
+                const offset = this.optimize ? 0 : 0.5;
+                this.context.lineWidth = this.optimize ? 2 : 1;
 
                 const rect = elt.getBoundingClientRect();
 
@@ -249,7 +252,8 @@ export class Guidespace implements Space {
         this.canvas.width = this.root.contentDocument!.documentElement.clientWidth;
         this.canvas.height = this.root.contentDocument!.documentElement.clientHeight;
     }
-    reset() {
+    reset(optimize: boolean) {
+        this.optimize = optimize
         this.recalibrate();
         this.clear()
     }
