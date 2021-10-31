@@ -30,7 +30,7 @@ export class StateService {
         instance = new StateService(componentSource)
     }
     update(componentSource: string) {
-        //override old states
+        //override old states for new component scope
         this.deconstruct(componentSource)
     }
     save() {

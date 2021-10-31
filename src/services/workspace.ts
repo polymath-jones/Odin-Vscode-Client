@@ -18,6 +18,7 @@ export class Workspace implements Space {
     resizeObserver?: ResizeObserver;
     historyService: HistoryService;
     selected: Array<HTMLElement> = new Array();
+    scale = 0
     private dz = require("./lib/detect-zoom");
 
 
@@ -190,9 +191,6 @@ export class Workspace implements Space {
         let child = new parser().parseFromString(`<divo> asfasfk </divo>`);
 
 
-
-
-
         let root = document.getElementsByClassName("hello").item(0);
         let elts = document.getElementsByTagNameNS('*', '*')
         document.getElementsByTagNameNS
@@ -220,16 +218,22 @@ export class Workspace implements Space {
     }
 
     scaleWorkspace(width: number) {
+        const rect = this.root.parentElement?.getBoundingClientRect()!
         const root = this.root;
-        const rect = root.getBoundingClientRect()
-        const scale = rect.width / width;
-    
-        root.style.transform = `scale(${scale})`;
+        this.scale = rect.width / width;
+
+        root.style.transform = `scale(${this.scale})`;
         root.style.transformOrigin = `0px 0px`;
-    
+
         root.style.minWidth = width + "px";
-        root.style.minHeight = rect.height / scale + "px";
-      }
+        root.style.minHeight = rect.height / this.scale + "px";
+
+    }
+
+    resizeWorkspace(rect: DOMRect) {
+        const root = this.root;
+        root.style.minWidth = rect.width / this.scale + "px";
+    }
 
     //Generate randowm ID
     generateID(): string {
@@ -272,17 +276,26 @@ export class Workspace implements Space {
         //Disable context menu
         iframe.contentDocument?.body.setAttribute('oncontextmenu', 'return false');
 
+        window.addEventListener('resize', (ev) => {
+            const rect = iframe.parentElement?.getBoundingClientRect()
+            if (this.scale != 0)
+                this.resizeWorkspace(rect!)
+        })
+
         //Resize Hook using the ResizeObserver api
         this.resizeObserver = new ResizeObserver((entries: any) => {
-            // this.scaleWorkspace(2000)
+
+
+
             const zoomRatio = this.getPixelRatio()
-            const optimize = zoomRatio < 1
             console.log('window zoom level: ' + Math.round(zoomRatio * 100) + '%');
 
-            gs.reset(optimize)
-            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)    
+            gs.reset(true)
+            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
 
         });
+        
+      //  this.scaleWorkspace(2000)
 
         //Observe the body's size
         this.resizeObserver.observe(iframe.contentDocument?.querySelector('body')!)

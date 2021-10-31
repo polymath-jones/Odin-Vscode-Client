@@ -99,7 +99,7 @@ export class Guidespace implements Space {
         }
 
     }
-    getRoot(): HTMLElement {
+    getRoot(): HTMLCanvasElement {
         return this.canvas;
     }
     drawPaddings(elt: HTMLElement) {
@@ -254,13 +254,16 @@ export class Guidespace implements Space {
     }
     reset(optimize: boolean) {
         this.optimize = optimize
+        this.canvas.setAttribute('style', this.getCanvasStyle());
+        console.log(this.optimize);
+        
         this.recalibrate();
         this.clear()
     }
 
 
     private getCanvasStyle(): string {
-        return `
+        return this.optimize? `
         position:fixed;
         z-index: 999999;
         pointer-events: none;
@@ -268,10 +271,20 @@ export class Guidespace implements Space {
         left:0;
         width: 100%; 
         height: 100%; 
+        `: ` position:fixed;
+        z-index: 999999;
+        pointer-events: none;
+        top:0;
+        left:0;
+        width: 100%; 
+        height: 100%;
         image-rendering: -moz-crisp-edges;
         image-rendering: -webkit-crisp-edges;
         image-rendering: pixelated;
-        image-rendering: crisp-edges;`
+        image-rendering: crisp-edges;; 
+        `
+
+
     }
     static init(window: HTMLIFrameElement) {
         if (!instance)
