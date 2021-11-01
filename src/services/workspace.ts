@@ -220,19 +220,22 @@ export class Workspace implements Space {
     scaleWorkspace(width: number) {
         const rect = this.root.parentElement?.getBoundingClientRect()!
         const root = this.root;
-        this.scale = rect.width / width;
+        if (width > rect.width) {
+            this.scale = rect.width / width;
 
-        root.style.transform = `scale(${this.scale})`;
-        root.style.transformOrigin = `0px 0px`;
+            root.style.transform = `scale(${this.scale})`;
+            root.style.transformOrigin = `0px 0px`;
 
-        root.style.minWidth = width + "px";
-        root.style.minHeight = rect.height / this.scale + "px";
+            root.style.minWidth = width + "px";
+            root.style.minHeight = rect.height / this.scale + "px";
+        }
 
     }
 
     resizeWorkspace(rect: DOMRect) {
         const root = this.root;
         root.style.minWidth = rect.width / this.scale + "px";
+        root.style.minHeight = rect.height / this.scale + "px";
     }
 
     //Generate randowm ID
@@ -285,8 +288,6 @@ export class Workspace implements Space {
         //Resize Hook using the ResizeObserver api
         this.resizeObserver = new ResizeObserver((entries: any) => {
 
-
-
             const zoomRatio = this.getPixelRatio()
             console.log('window zoom level: ' + Math.round(zoomRatio * 100) + '%');
 
@@ -294,8 +295,8 @@ export class Workspace implements Space {
             gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
 
         });
-        
-      //  this.scaleWorkspace(2000)
+
+        //this.scaleWorkspace(1800)
 
         //Observe the body's size
         this.resizeObserver.observe(iframe.contentDocument?.querySelector('body')!)

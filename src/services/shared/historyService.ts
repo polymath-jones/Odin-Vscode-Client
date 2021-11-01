@@ -75,8 +75,6 @@ export class HistoryService {
     private constructor() {
         this.redoStack = new Array()
         this.undoStack = new Array()
-
-        StateService.init("")
         this.stateService = StateService.getInstance();
 
         // this.templateEditor = TemplateEditor.getInstance()
@@ -84,7 +82,6 @@ export class HistoryService {
 
     static init() {
         HistoryService.instance = new HistoryService();
-
 
     }
     push(state: State) {

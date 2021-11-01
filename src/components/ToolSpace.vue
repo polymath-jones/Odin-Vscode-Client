@@ -13,13 +13,13 @@
       ></iframe>
     </section>
     <section class="pane background right-pane">
-      <input
+     <!--  <input
         @change="changePosition"
         :value="top"
         type="number"
         name=""
         id="in"
-      />
+      /> -->
       <ColorPicker
         class="color-picker"
         @changePickerColorBen="backgroundColorHandler"
@@ -47,6 +47,7 @@ import { h } from "@vue/runtime-core";
   },
 })
 export default class HelloWorld extends Vue {
+
   styleSheet!: HTMLStyleElement;
   root!: HTMLIFrameElement;
   selected!: Array<HTMLElement>;
@@ -68,44 +69,6 @@ export default class HelloWorld extends Vue {
   historyService!: HistoryService;
   gs!: Guidespace;
 
-  /*   changeColor(color: string) {
-    if (this.selected !== undefined) {
-      this.selected.forEach((elt) => {
-        elt.classList.add("omo");
-      });
-
-      this.styleParser.update(
-        ".omo",
-        "background-color",
-        color + " !important"
-      );
-
-      this.styleSheet.innerHTML = this.styleParser.print()
-        ? (this.styleParser.print() as string)
-        : "";
-    }
-  }
-  changePosition(e: InputEvent) {
-    var top = (e.target as HTMLInputElement).value;
-    this.selected.forEach((elt) => {
-      elt.classList.add("omo");
-    });
-
-    this.styleParser.update(".omo", "left", top + "px");
-    this.styleParser.update(".omo", "top", top + "px");
-
-    this.styleSheet.innerHTML = this.styleParser.print()
-      ? (this.styleParser.print() as string)
-      : "";
-
-    this.gs.clear();
-    this.gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
-  }
- */
-
-  beforeCreate() {
-    console.log("creating");
-  }
 
   backgroundColorHandler(color: string) {
     if (this.selected !== undefined) {
@@ -440,6 +403,7 @@ input {
   display: flex;
   flex-flow: column;
   height: 100%;
+  height: calc(100vh -24px) ;
   width: calc(100vw - 480px);
   z-index: 99;
 }
