@@ -169,24 +169,25 @@ export class Guidespace implements Space {
         switch (mode) {
             case SELECTION_MODE.HIGHLIGHT: {
                 //To achieve 1px lines
-                
+
                 const elt = elts[0];
+                if (elt.getAttribute("contenteditable") !== "true") {
+                    this.context.strokeStyle = "#178df7";
+                    if (elt.getAttribute('draggable') !== 'true') {
+                        this.context.strokeStyle = "#f10e0e";
+                    }
 
-                this.context.strokeStyle = "#178df7";
-                if (elt.getAttribute('draggable') !== 'true') {
-                    this.context.strokeStyle = "#f10e0e";
+                    const offset = this.optimize ? 0 : 0.5;
+                    this.context.lineWidth = this.optimize ? 2 : 1;
+
+                    const rect = elt.getBoundingClientRect();
+
+                    const x = Math.floor(rect.x) + offset;
+                    const y = Math.floor(rect.y) + offset;
+                    const w = Math.floor(rect.width);
+                    const h = Math.floor(rect.height);
+                    this.context.strokeRect(x, y, w, h)
                 }
-                
-                const offset = this.optimize ? 0 : 0.5;
-                this.context.lineWidth = this.optimize ? 2 : 1;
-
-                const rect = elt.getBoundingClientRect();
-
-                const x = Math.floor(rect.x) + offset;
-                const y = Math.floor(rect.y) + offset;
-                const w = Math.floor(rect.width);
-                const h = Math.floor(rect.height);
-                this.context.strokeRect(x, y, w, h)
 
                 // this.drawPaddings(elt);
                 // this.drawMargins(elt)
@@ -197,21 +198,22 @@ export class Guidespace implements Space {
 
                 if (elts.length != 0) {
                     elts.forEach(elt => {
-                        this.context.beginPath();
-                        const offset = 0;
-                        this.context.strokeStyle = "#178df7";
-                        if (elt.getAttribute('draggable') !== 'true') {
-                            this.context.strokeStyle = "#f10e0e";
+                        if (elt.getAttribute("contenteditable") !== "true") {
+                            this.context.beginPath();
+                            const offset = 0;
+                            this.context.strokeStyle = "#178df7";
+                            if (elt.getAttribute('draggable') !== 'true') {
+                                this.context.strokeStyle = "#f10e0e";
+                            }
+                            this.context.lineWidth = 2;
+
+                            const rect = elt.getBoundingClientRect();
+                            const x = Math.floor(rect.x) + offset;
+                            const y = Math.floor(rect.y) + offset;
+                            const w = Math.floor(rect.width);
+                            const h = Math.floor(rect.height);
+                            this.context.strokeRect(x, y, w, h);
                         }
-                        this.context.lineWidth = 2;
-
-                        const rect = elt.getBoundingClientRect();
-                        const x = Math.floor(rect.x) + offset;
-                        const y = Math.floor(rect.y) + offset;
-                        const w = Math.floor(rect.width);
-                        const h = Math.floor(rect.height);
-                        this.context.strokeRect(x, y, w, h);
-
 
                     })
                 }
@@ -256,14 +258,14 @@ export class Guidespace implements Space {
         this.optimize = optimize
         this.canvas.setAttribute('style', this.getCanvasStyle());
         console.log(this.optimize);
-        
+
         this.recalibrate();
         this.clear()
     }
 
 
     private getCanvasStyle(): string {
-        return this.optimize? `
+        return this.optimize ? `
         position:fixed;
         z-index: 999999;
         pointer-events: none;
@@ -283,8 +285,6 @@ export class Guidespace implements Space {
         image-rendering: pixelated;
         image-rendering: crisp-edges;; 
         `
-
-
     }
     static init(window: HTMLIFrameElement) {
         if (!instance)

@@ -30,6 +30,7 @@ export class Workspace implements Space {
         this.registerHooks();
 
 
+
         //this.testXmlDom();
 
     }
@@ -296,7 +297,7 @@ export class Workspace implements Space {
 
         });
 
-        //this.scaleWorkspace(1800)
+         this.scaleWorkspace(2000)
 
         //Observe the body's size
         this.resizeObserver.observe(iframe.contentDocument?.querySelector('body')!)
@@ -364,13 +365,10 @@ export class Workspace implements Space {
 
             if ((currentDropZoneElt != undefined) && (currentPlacement != undefined)) {
 
-                console.log(altDown);
-
                 let source: HTMLElement
-                if (altDown)
-                    source = currentDraggable?.cloneNode(true) as HTMLElement
-                else
-                    source = currentDraggable as HTMLElement
+
+                if (altDown)source = currentDraggable?.cloneNode(true) as HTMLElement
+                else source = currentDraggable as HTMLElement
 
                 if (!altDown) this.saveDomUpdateToHistory(currentDropZoneElt as HTMLElement, source, currentPlacement)
                 else this.saveDomCreateToHistory(currentDropZoneElt as HTMLElement, source, currentPlacement)
@@ -634,23 +632,12 @@ export class Workspace implements Space {
                 gs.clear()
                 gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
             }
-            else if (e.key === "z" && ctrlDown) {
-                e.preventDefault()
-                if (altDown) {
-                    this.historyService.redo()
-                }
-                else
-                    this.historyService.undo()
-                gs.clear()
-                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-
-
-            }
             else if (!lkeyDown && e.key === "l") {
-                e.preventDefault()
-                lkeyDown = true
 
                 if (ctrlDown && !altDown) {
+                    e.preventDefault()
+                    lkeyDown = true
+
                     this.selected.forEach(elt => {
                         this.toggleDraggable(elt, true);
                         this.toggleDropZone(elt, true)
@@ -661,6 +648,9 @@ export class Workspace implements Space {
                 }
                 //lock element and children
                 else if (ctrlDown && altDown) {
+                    e.preventDefault()
+                    lkeyDown = true
+
                     if (this.selected.length > 1)
                         console.log(' locking does not work with multiselection');
                     var elt = this.selected[0]
@@ -674,11 +664,12 @@ export class Workspace implements Space {
 
             }
             else if (!pkeyDown && e.key === "p") {
-                e.preventDefault()
-                pkeyDown = true
+
 
                 //parent selecting
                 if (ctrlDown && this.selected.length == 1) {
+                    e.preventDefault()
+                    pkeyDown = true
                     var elt = this.selected[0]
                     if (elt && elt.parentElement) {
                         this.selected[0] = elt.parentElement;
@@ -688,11 +679,12 @@ export class Workspace implements Space {
                 }
             }
             else if (!dkeyDown && e.key === "d") {
-                e.preventDefault()
-                dkeyDown = true
+
 
                 //duplicate element
                 if (ctrlDown) {
+                    e.preventDefault()
+                    dkeyDown = true
                     this.selected.forEach(elt => {
                         if (elt && elt.parentElement) {
                             const dup = elt.cloneNode(true)

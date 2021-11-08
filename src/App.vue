@@ -16,7 +16,7 @@ body {
   text-align: center;
   color: #2c3e50;
   background-color: black;
-  background-image: url('assets/bg3.jpg');
-  background-size: contain;
+  background-image: url('assets/bg4.jpg');
+  background-size:cover;
 }
 </style>

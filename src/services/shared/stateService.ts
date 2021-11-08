@@ -49,7 +49,6 @@ export class StateService {
         }`
         );
 
-
     }
     getStyleParser(): StyleParser {
         return this.styleParser;
