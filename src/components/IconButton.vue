@@ -23,7 +23,7 @@ import { Options, Vue } from "vue-class-component";
   components: {},
 })
 export default class IconButton extends Vue {
-  active = false;
+  active = true;
   handler() {
     if (this.active) this.active = false;
     else this.active = true;
@@ -35,6 +35,7 @@ export default class IconButton extends Vue {
 <style scoped>
 .button-image {
   width: 20px;
+
 }
 
 .button-active {
@@ -49,9 +50,9 @@ export default class IconButton extends Vue {
 .image-container {
   cursor: pointer;
   opacity: 0.5;
-  padding: 10px 20px;
+  padding: 8px 20px;
   width: fit-content;
-  height: 40px;
+  height: 35px;
 }
 .button-wrapper {
   opacity: 0.6;

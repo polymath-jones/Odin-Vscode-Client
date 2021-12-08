@@ -5,6 +5,7 @@ import { TemplateEditors } from './shared/templateEditor'
 import ResizeObserver from 'resize-observer-polyfill';
 import * as xmlDom from 'xmldom'
 import { HistoryService, OPERTATION_MODE, OPERTATION_TYPE, State } from './shared/historyService';
+import { Toolspace } from './toolspace';
 var instance: Workspace;
 
 
@@ -28,6 +29,10 @@ export class Workspace implements Space {
         this.historyService = HistoryService.getInstance()
         this.toggleAll(iframe.contentDocument!.body)
         this.registerHooks();
+        //Disable context menu
+        iframe.contentDocument?.body.setAttribute('oncontextmenu', 'return false');
+        iframe.contentWindow?.focus();
+
 
 
 
@@ -216,38 +221,7 @@ export class Workspace implements Space {
         //   console.log(output);
 
 
-    }
 
-    scaleWorkspace(width: number) {
-        const rect = this.root.parentElement?.getBoundingClientRect()!
-        const root = this.root;
-        if (width > rect.width) {
-            this.scale = rect.width / width;
-
-            root.style.transform = `scale(${this.scale})`;
-            root.style.transformOrigin = `0px 0px`;
-
-            root.style.minWidth = width + "px";
-            root.style.minHeight = rect.height / this.scale + "px";
-        }
-
-    }
-
-    resizeWorkspace(rect: DOMRect) {
-        const root = this.root;
-        root.style.minWidth = rect.width / this.scale + "px";
-        root.style.minHeight = rect.height / this.scale + "px";
-    }
-
-    //Generate randowm ID
-    generateID(): string {
-        let s4 = () => {
-            return Math.floor((1 + Math.random()) * 0x10000)
-                .toString(16)
-                .substring(1);
-        };
-        var gid = s4() + s4() + "_" + s4();
-        return gid;
     }
 
     getRoot(): HTMLElement {
@@ -263,7 +237,9 @@ export class Workspace implements Space {
 
         const iframe = this.root;
         Guidespace.init(iframe);
+
         var gs = Guidespace.getInstance();
+        var ts = Toolspace.getInstance();
         var dragging = false;
         var altDown = false;
         var shiftDown = false;
@@ -271,14 +247,26 @@ export class Workspace implements Space {
         var lkeyDown = false;
         var pkeyDown = false;
         var dkeyDown = false;
+        var mouseDown = false;
+        var editing = false;
+        var wasDragging = false;
+        var wasSelecting = false;
+
         var currentDraggable: HTMLElement | undefined;
         var currentDropZoneElt: ChildNode | HTMLElement | undefined;
         var currentPlacement: PLACEMENT_MODE | undefined;
+        var currentEditable!: HTMLElement | undefined;
 
-        iframe.contentWindow?.focus();
 
-        //Disable context menu
-        iframe.contentDocument?.body.setAttribute('oncontextmenu', 'return false');
+        var start = [0, 0];
+        var offset = [0, 0];
+        var top = 0;
+        var color = "";
+        var display = "";
+
+
+
+
 
         window.addEventListener('resize', (ev) => {
             const rect = iframe.parentElement?.getBoundingClientRect()
@@ -292,16 +280,14 @@ export class Workspace implements Space {
             const zoomRatio = this.getPixelRatio()
             console.log('window zoom level: ' + Math.round(zoomRatio * 100) + '%');
 
-            gs.reset(true)
+            gs.reset(false)
             gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
 
         });
-
-         this.scaleWorkspace(2000)
-
         //Observe the body's size
         this.resizeObserver.observe(iframe.contentDocument?.querySelector('body')!)
-
+        
+       // this.scaleWorkspace(1500)
         //Redraw guidespace on scroll
         iframe.contentWindow!.onscroll = (e) => {
             gs.clear()
@@ -309,13 +295,232 @@ export class Workspace implements Space {
         }
 
         /**
-         * @ondragstart hook sets the currentDraggable to valid target
+        * @dbclick hook sets the contenteditable attribute
+        * of an element to true
+        */
+        this.root.contentDocument!.addEventListener("dblclick", (e) => {
+            editing = true;
+            var elt = e.target as HTMLElement;
+            if (currentEditable !== elt) {
+                currentEditable = elt;
+                display = elt.style.display.toString();
+                elt.setAttribute("contenteditable", "true");
+                elt.style.cursor = "text";
+                elt.style.display = "inline-block";
+                elt.focus();
+                Workspace.getInstance().toggleDraggable(elt, true);
+                gs.clear();
+                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
+            }
+        });
+
+        /**
+        * @click hook handles different selecting modes: direct, parent and multiselecting.
+        * It also resets all elements with the contenteditable attribute to true
+        */
+        this.root.contentDocument!.addEventListener("click", (e: MouseEvent) => {
+            var elt = e.target! as HTMLElement;
+
+            //Select parent
+            if (altDown && elt.parentElement) {
+                elt = elt.parentElement;
+            }
+
+            //Reset contenteditable
+            if (currentEditable && elt != currentEditable) {
+                editing = false;
+                Workspace.getInstance().toggleDraggable(currentEditable, true);
+                currentEditable.setAttribute("contenteditable", "false");
+                currentEditable.style.display = display;
+                currentEditable.style.cursor = "initial";
+                currentEditable = undefined;
+            }
+
+            //Single selection. If previous action was multiselection, then reset.
+            if (
+                !["body", "html"].includes(elt.tagName.toLowerCase()) &&
+                !ctrlDown
+            ) {
+                if (!this.selected.includes(elt) && this.selected.length <= 1) {
+                    this.selected.splice(0, this.selected.length);
+                    this.selected.push(elt);
+                } else if (this.selected.length > 1) {
+                    this.selected.splice(0, this.selected.length);
+                    this.selected.push(elt);
+                }
+
+                //Manual multiselection using the control modifier key
+            } else if (
+                !["body", "html"].includes(elt.tagName.toLowerCase()) &&
+                ctrlDown
+            ) {
+                if (!this.selected.includes(elt)) {
+                    this.selected.push(elt);
+                } else {
+                    this.selected.splice(this.selected.indexOf(elt), 1);
+                }
+            }
+            gs.clear();
+            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
+            ts.setSelected(this.selected) // set selected elements in toolspace
+
+            //Handler overrides: prevent all handlers in workspace document from being called
+            e.stopPropagation();
+            e.preventDefault();
+        },
+            // Make hook alpha
+            true
+        );
+
+        /**
+         * @mousedown hook gets starting position data for multiselection
+         * overlay and
+         * experimental position styling with shift modifier
+         */
+        this.root.contentDocument!.addEventListener(
+            "mousedown",
+            (e: MouseEvent) => {
+                if (shiftDown) {
+                    var elt = e.target! as HTMLElement;
+                    if (this.selected.includes(elt)) {
+                        this.selected.forEach((element) => {
+                            if (!element.style.position) element.style.position = "relative";
+                        });
+
+                        mouseDown = true;
+                        offset = [
+                            parseInt(this.root.contentWindow!.getComputedStyle(elt).left) ||
+                            0,
+                            parseInt(this.root.contentWindow!.getComputedStyle(elt).top) || 0,
+                        ];
+                        start = [
+                            e.clientX - offset[0],
+                            e.clientY - offset[1],
+                        ];
+                    }
+                } else if (ctrlDown) {
+                    //multiselect
+                    mouseDown = true;
+                    start = [e.clientX, e.clientY];
+                    console.log(start);
+
+                }
+            }
+        );
+        /**
+         * @mouseup hook gets end position after multiselection operation
+         */
+        this.root.contentDocument!.addEventListener(
+            "mouseup",
+            (event: MouseEvent) => {
+                if (mouseDown) {
+                    mouseDown = false;
+
+                    if (wasDragging) {
+                        wasDragging = false;
+                    } else if (wasSelecting) {
+                        wasSelecting = false;
+                        this.selected.splice(0, this.selected.length);
+
+                        this.walkTheDOM(this.root.contentDocument?.body as Node, (node) => {
+                            const elt = node as HTMLElement;
+
+                            if (elt != this.getRoot()) {
+                                const rect = elt.getBoundingClientRect();
+                                var x = start[0];
+                                var y = start[1];
+                                var w = event.x - x;
+                                var h = event.y - y;
+
+                                //hit detection
+                                if (w < 0 && h >= 0) {
+                                    x = event.x;
+                                    w = -w;
+                                } else if (h < 0 && w >= 0) {
+                                    y = event.y;
+                                    h = -h;
+                                } else if (w < 0 && h < 0) {
+                                    x = event.x;
+                                    w = -w;
+                                    y = event.y;
+                                    h = -h;
+                                }
+
+                                if (
+                                    rect.x < x + w &&
+                                    rect.x + rect.width > x &&
+                                    rect.y < y + h &&
+                                    rect.height + rect.y > y
+                                ) {
+                                    this.selected.push(elt);
+                                }
+
+                                return false;
+                            }
+
+                            return true;
+                        });
+                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
+                    }
+                    start = [];
+                }
+            }
+        );
+
+        /** 
+         * @mousemove hook gets current position data for multiselection
+         * overlay, draws highlights on hovered elements and
+         * experimental positioning with shift modifier
+         */
+        this.root.contentDocument!.addEventListener(
+            "mousemove",
+            (e: MouseEvent) => {
+                const elt = e.target as HTMLElement;
+
+                if (mouseDown && shiftDown) {
+                    this.selected.forEach((elt) => {
+                        elt.classList.add("omo");
+                    });
+
+                    wasDragging = true;
+
+                    var delX = e.clientX - start[0];
+                    var delY = e.clientY - start[1];
+
+                    top = delY;
+                    /*  this.styleParser.update(".omo", "left", delX + "px");
+                    this.styleParser.update(".omo", "top", delY + "px");
+          
+                    //todo:should be a function
+                    this.styleSheet.innerHTML = this.styleParser.print()
+                      ? (this.styleParser.print() as string)
+                      : ""; */
+                } else if (mouseDown && ctrlDown) {
+                    console.log('moving mouse with control');
+
+                    wasSelecting = true;
+                    gs.clear();
+                    gs.drawOverlay([...start, e.clientX, e.clientY]);
+                }
+                else if (!dragging) {
+                    gs.clear()
+                    gs.drawSelected([elt], SELECTION_MODE.HIGHLIGHT)
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                }
+            },
+            // Make hook alpha
+            true
+        );
+
+        /**
+         * @dragstart hook overrides default drag behaviour if modifiers
+         * are active and hook sets the currentDraggable to valid target
          * and prevents default if not valid
          */
-        iframe.contentDocument!.ondragstart = (e) => {
+        this.root.contentDocument!.addEventListener("dragstart", (e: MouseEvent) => {
             iframe.focus()
             const elt = e.target as HTMLElement;
-            if (elt.getAttribute("draggable") == "true") {
+            if (elt.getAttribute("draggable") == "true" && !(shiftDown || ctrlDown)) {
                 dragging = true;
                 currentDraggable = elt
                 this.toggleDropZone(currentDraggable, false, false)
@@ -329,18 +534,13 @@ export class Workspace implements Space {
                 e.stopPropagation()
                 return false
             }
-        }
-        /**
-         * @onmousemove hook draws highlights on hovered elements
-         */
-        iframe.contentDocument!.onmousemove = (e) => {
-            var elt = e.target as HTMLElement;
-            if (!dragging) {
-                gs.clear()
-                gs.drawSelected([elt], SELECTION_MODE.HIGHLIGHT)
-                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-            }
-        }
+
+        },
+            //Make hook alpha
+            true
+        );
+
+
         /**
          * @ondragend resets the dragging flag and toggles dropzone
          * attribute of currentDraggable
@@ -367,7 +567,7 @@ export class Workspace implements Space {
 
                 let source: HTMLElement
 
-                if (altDown)source = currentDraggable?.cloneNode(true) as HTMLElement
+                if (altDown) source = currentDraggable?.cloneNode(true) as HTMLElement
                 else source = currentDraggable as HTMLElement
 
                 if (!altDown) this.saveDomUpdateToHistory(currentDropZoneElt as HTMLElement, source, currentPlacement)
@@ -624,6 +824,16 @@ export class Workspace implements Space {
             } else if (e.altKey && !altDown) {
                 altDown = true;
             }
+            else if (e.key === "z" && ctrlDown) {
+                if (!editing) {
+                    e.preventDefault();
+                    if (altDown) {
+                        this.historyService.redo();
+                    } else this.historyService.undo();
+                    gs.clear();
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
+                }
+            }
             else if (e.key === "Delete") {
                 this.selected.forEach(elt => {
                     this.saveDomDeleteToHistory(elt)
@@ -721,6 +931,161 @@ export class Workspace implements Space {
                 dkeyDown = false;
             }
         });
+
+        document.addEventListener("keydown", (e: KeyboardEvent) => {
+
+            if (e.shiftKey && !shiftDown) {
+                shiftDown = true;
+            } else if (e.ctrlKey && !ctrlDown) {
+                ctrlDown = true;
+            } else if (e.altKey && !altDown) {
+                altDown = true;
+            }
+            else if (e.key === "z" && ctrlDown) {
+                if (!editing) {
+                    e.preventDefault();
+                    if (altDown) {
+                        this.historyService.redo();
+                    } else this.historyService.undo();
+                    gs.clear();
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
+                }
+            }
+            /* else if (e.key === "Delete") {
+                this.selected.forEach(elt => {
+                    this.saveDomDeleteToHistory(elt)
+                    TemplateEditors.deleteInDOM(elt)
+                });
+                gs.clear()
+                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+            } */
+            else if (!lkeyDown && e.key === "l") {
+
+                if (ctrlDown && !altDown) {
+                    e.preventDefault()
+                    lkeyDown = true
+
+                    this.selected.forEach(elt => {
+                        this.toggleDraggable(elt, true);
+                        this.toggleDropZone(elt, true)
+                    })
+                    gs.clear()
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+
+                }
+                //lock element and children
+                else if (ctrlDown && altDown) {
+                    e.preventDefault()
+                    lkeyDown = true
+
+                    if (this.selected.length > 1)
+                        console.log(' locking does not work with multiselection');
+                    var elt = this.selected[0]
+                    if (elt) {
+                        this.toggleDraggable(elt, false);
+                        this.toggleDropZone(elt, false)
+                    }
+                    gs.clear()
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                }
+
+            }
+            else if (!pkeyDown && e.key === "p") {
+
+
+                //parent selecting
+                if (ctrlDown && this.selected.length == 1) {
+                    e.preventDefault()
+                    pkeyDown = true
+                    var elt = this.selected[0]
+                    if (elt && elt.parentElement) {
+                        this.selected[0] = elt.parentElement;
+                        gs.clear()
+                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                    }
+                }
+            }
+            else if (!dkeyDown && e.key === "d") {
+
+
+                //duplicate element
+                if (ctrlDown) {
+                    e.preventDefault()
+                    dkeyDown = true
+                    this.selected.forEach(elt => {
+                        if (elt && elt.parentElement) {
+                            const dup = elt.cloneNode(true)
+                            this.saveDomCreateToHistory(elt, dup as HTMLElement, PLACEMENT_MODE.AFTER)
+                            elt.after(dup)
+
+                        }
+                    })
+                }
+                gs.clear()
+                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+            }
+        }
+        );
+
+        document.addEventListener("keyup", (e: KeyboardEvent) => {
+            if (shiftDown && !e.shiftKey) {
+                shiftDown = false;
+            } else if (!e.ctrlKey && ctrlDown) {
+                ctrlDown = false;
+            } else if (!e.altKey && altDown) {
+                altDown = false;
+            }
+            else if (lkeyDown && e.key === "l") {
+                lkeyDown = false;
+            }
+            else if (pkeyDown && e.key === "p") {
+                pkeyDown = false;
+            }
+            else if (dkeyDown && e.key === "d") {
+                dkeyDown = false;
+            }
+        });
+
+    }
+
+    walkTheDOM(start: Node, func: (node: Node) => boolean) {
+        const dive = func(start);
+        var node = dive ? start.firstChild! : start.nextSibling;
+        while (node) {
+            this.walkTheDOM(node, func);
+            node = node.nextSibling!;
+        }
+    }
+
+    scaleWorkspace(width: number) {
+        const rect = this.root.parentElement?.getBoundingClientRect()!
+        const root = this.root;
+        if (width > rect.width) {
+            this.scale = rect.width / width;
+
+            root.style.transform = `scale(${this.scale})`;
+            root.style.transformOrigin = `0px 0px`;
+
+            root.style.minWidth = width + "px";
+            root.style.minHeight = rect.height / this.scale + "px";
+        }
+
+    }
+
+    resizeWorkspace(rect: DOMRect) {
+        const root = this.root;
+        root.style.minWidth = rect.width / this.scale + "px";
+        root.style.minHeight = rect.height / this.scale + "px";
+    }
+
+    generateID(): string {
+        let s4 = () => {
+            return Math.floor((1 + Math.random()) * 0x10000)
+                .toString(16)
+                .substring(1);
+        };
+        var gid = s4() + s4() + "_" + s4();
+        return gid;
     }
 
     saveDomUpdateToHistory(relative: HTMLElement, element: HTMLElement, mode: PLACEMENT_MODE) {

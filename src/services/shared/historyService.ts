@@ -26,19 +26,24 @@ import { TemplateEditors } from '../shared/templateEditor'
 import { PLACEMENT_MODE } from "../guidespace"
 import { StyleEditors } from './styleEditor';
 import { StateService } from './stateService';
+import { Toolspace } from '../toolspace';
 
 
 export enum OPERTATION_TYPE {
     DOM, STYLE, SCRIPT
 }
 export enum OPERTATION_MODE {
-    DELETE, UPDATE, CREATE, DELETE_DECLARATION, DELETE_SELECTOR, DELETE_RULE, CREATE_DECLARATION, CREATE_SELECTOR, CREATE_RULE
+    DELETE, UPDATE, CREATE, UPDATE_DECLARATION, DELETE_DECLARATION, DELETE_SELECTOR, DELETE_RULE, CREATE_DECLARATION, CREATE_SELECTOR, CREATE_RULE
 }
 
 export type StyleOperands = {
     declaration: any;
     selector: any;
     rule: any;
+    oldValue: string;
+    newValue: string;
+    selected: Array<HTMLElement>;
+    stylesheet: HTMLStyleElement;
 }
 export type DomOperands = {
     element: HTMLElement;
@@ -64,20 +69,16 @@ const MAX_SAVES = 200
 //depends on template editor
 export class HistoryService {
 
-    
+
     private static instance: HistoryService = new HistoryService()
 
 
-    stateService: StateService
     private undoStack: Array<State>
     private redoStack: Array<State>
 
     private constructor() {
         this.redoStack = new Array()
         this.undoStack = new Array()
-        this.stateService = StateService.getInstance();
-
-        // this.templateEditor = TemplateEditor.getInstance()
     }
 
     static init() {
@@ -87,6 +88,9 @@ export class HistoryService {
     push(state: State) {
         if (this.undoStack.length > MAX_SAVES)
             this.undoStack.splice(0, 1)
+        if (this.redoStack.length > 0) {
+            this.redoStack.splice(0)
+        }
 
         this.undoStack.push(state);
     }
@@ -132,6 +136,42 @@ export class HistoryService {
                         }
                     }
 
+                    break;
+                }
+                case OPERTATION_TYPE.STYLE: {
+                    switch (state.operationMode) {
+                        case OPERTATION_MODE.UPDATE_DECLARATION: {
+
+                            const ops = (state.operands as StyleOperands)
+                            const sel = ops.selector as string
+                            const dec = ops.declaration.getNameAsString()
+                            const val = ops.oldValue as string
+
+                            // console.log("undoing declaration");
+
+                            StyleEditors.updateDeclaration(
+                                { rule: sel, declaration: dec, value: val, precedence: false },
+                                ops.stylesheet,
+                                StateService.getInstance().getStyleParser()
+                            );
+                            Toolspace.getInstance().updateUIState()
+                            break;
+                        }
+
+                        case OPERTATION_MODE.CREATE_DECLARATION: {
+
+                            const ops = (state.operands as StyleOperands)
+                            const sel = ops.selector as string
+                            const dec = ops.declaration.getNameAsString()
+                            StyleEditors.removeDeclaration(
+                                { rule: sel, declaration: dec },
+                                ops.stylesheet,
+                                StateService.getInstance().getStyleParser()
+                            )
+                            Toolspace.getInstance().updateUIState()
+                            break;
+                        }
+                    }
                     break;
                 }
             }
@@ -180,6 +220,42 @@ export class HistoryService {
                         }
                     }
 
+                    break;
+                }
+
+                case OPERTATION_TYPE.STYLE: {
+                    switch (state.operationMode) {
+                        case OPERTATION_MODE.UPDATE_DECLARATION: {
+
+                            const ops = (state.operands as StyleOperands)
+                            const sel = ops.selector as string
+                            const dec = ops.declaration.getNameAsString()
+                            const val = ops.newValue as string
+                            StyleEditors.updateDeclaration(
+                                { rule: sel, declaration: dec, value: val, precedence: false },
+                                ops.stylesheet,
+                                StateService.getInstance().getStyleParser()
+                            );
+                            Toolspace.getInstance().updateUIState()
+                            break;
+                        }
+
+                        case OPERTATION_MODE.CREATE_DECLARATION: {
+
+                            const ops = (state.operands as StyleOperands)
+                            const sel = ops.selector as string
+                            const dec = ops.declaration.getNameAsString()
+                            const val = ops.newValue as string
+
+                            StyleEditors.createDeclaration(
+                                { rule: sel, declaration: dec, value: val, precedence: false },
+                                ops.stylesheet,
+                                StateService.getInstance().getStyleParser()
+                            )
+                            Toolspace.getInstance().updateUIState()
+                            break;
+                        }
+                    }
                     break;
                 }
 

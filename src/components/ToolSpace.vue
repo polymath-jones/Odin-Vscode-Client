@@ -26,18 +26,33 @@
         :color="color"
       /> -->
 
-      <dynamic-tab></dynamic-tab>
+      <dynamic-tab @updateStyle="testHandler"></dynamic-tab>
     </section>
   </div>
 </template>
 
 <script lang="ts">
+
+/**
+ * 
+ * On element click:: get in-app classes and add to selected array
+ * Update the UI vuex state with selected-class style 
+ * On UI event:: handle event and edit style with toolspace service
+ * 
+ * 
+ * 
+ * 
+ **/  
+
+
+
 import { Options, Vue } from "vue-class-component";
 import { Workspace } from "../services/workspace";
 import { StyleEditors } from "../services/shared/styleEditor";
 import { StateService } from "../services/shared/stateService";
 import { HistoryService } from "../services/shared/historyService";
-import { Guidespace, SELECTION_MODE } from "../services/guidespace";
+import { Guidespace } from "../services/guidespace";
+import { Toolspace } from "../services/toolspace";
 import ColorPicker from "vue3-ts-picker";
 import DynamicTab from "./DynamicTab.vue";
 
@@ -49,10 +64,11 @@ import DynamicTab from "./DynamicTab.vue";
   },
 })
 export default class HelloWorld extends Vue {
-  
+
   styleSheet!: HTMLStyleElement;
   root!: HTMLIFrameElement;
   selected!: Array<HTMLElement>;
+  selectedClasses!: Array<string>;
   currentEditable!: HTMLElement | undefined;
 
   shiftDown = false;
@@ -71,318 +87,32 @@ export default class HelloWorld extends Vue {
 
   stateService!: StateService;
   historyService!: HistoryService;
+  toolspace!: Toolspace;
   gs!: Guidespace;
+  ts!: Toolspace;
 
-  backgroundColorHandler(color: string) {
-    if (this.selected !== undefined) {
-      this.selected.forEach((elt) => {
-        elt.classList.add("omo");
-      });
-    }
-    StyleEditors.changeColor(
-      color,
-      this.styleSheet,
-      this.stateService.getStyleParser()
-    );
+ 
+  /*   updateSelected(selected: Array<HTMLElement>, selectedClasses: Array<string>) {
+    this.selected = selected;
+    this.selectedClasses = selectedClasses;
   }
-
+ */
   beforeMount() {
     StateService.init("");
     this.stateService = StateService.getInstance();
   }
-  /**
-   * @loaded attaches workspace hooks
-   * on load and reload of the iframe
-   */
+
   loaded() {
     this.root = this.$refs.workspace as HTMLIFrameElement;
-    Workspace.init(this.root);
-
     this.styleSheet = this.root.contentDocument!.createElement("style");
     this.root.contentDocument?.body.append(this.styleSheet);
 
-    this.selected = Workspace.getInstance().selected;
+    Toolspace.init(this.root, this.styleSheet);
+    Workspace.init(this.root);
 
     this.gs = Guidespace.getInstance();
+    this.ts = Toolspace.getInstance();
     this.historyService = HistoryService.getInstance();
-    this.registerHooks();
-  }
-
-  walkTheDOM(start: Node, func: (node: Node) => boolean) {
-    const dive = func(start);
-    var node = dive ? start.firstChild! : start.nextSibling;
-    while (node) {
-      this.walkTheDOM(node, func);
-      node = node.nextSibling!;
-    }
-  }
-
-  /**
-   * @registerHooks attaches hooks for editing text elements,
-   * selecting elements in the workspace ( manual-multiselecting, multiselecting,... ),
-   * element positioning, and keyboard key mappings
-   */
-  registerHooks() {
-    /**
-     * @dbclick hook sets the contenteditable attribute
-     * of an element to true
-     */
-    this.root.contentDocument!.addEventListener("dblclick", (e) => {
-      this.editing = true;
-      var elt = e.target as HTMLElement;
-      if (this.currentEditable !== elt) {
-        this.currentEditable = elt;
-        this.display = elt.style.display.toString();
-        elt.setAttribute("contenteditable", "true");
-        elt.style.cursor = "text";
-        elt.style.display = "inline-block";
-        elt.focus();
-        Workspace.getInstance().toggleDraggable(elt, true);
-        this.gs.clear();
-        this.gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
-      }
-    });
-
-    /**
-     * @click hook handles different selecting modes: direct, parent and multiselecting.
-     * It also resets all elements with the contenteditable attribute to true
-     */
-    this.root.contentDocument!.addEventListener(
-      "click",
-      (e: MouseEvent) => {
-        var elt = e.target! as HTMLElement;
-
-        //Select parent
-        if (this.altDown && elt.parentElement) {
-          elt = elt.parentElement;
-        }
-
-        //Reset contenteditable
-        if (this.currentEditable && elt != this.currentEditable) {
-          this.editing = false;
-          Workspace.getInstance().toggleDraggable(this.currentEditable, true);
-          this.currentEditable.setAttribute("contenteditable", "false");
-          this.currentEditable.style.display = this.display;
-          this.currentEditable.style.cursor = "initial";
-          this.currentEditable = undefined;
-        }
-
-        //Single selection. If previous action was multiselection, then reset.
-        if (
-          !["body", "html"].includes(elt.tagName.toLowerCase()) &&
-          !this.ctrlDown
-        ) {
-          if (!this.selected.includes(elt) && this.selected.length <= 1) {
-            this.selected.splice(0, this.selected.length);
-            this.selected.push(elt);
-          } else if (this.selected.length > 1) {
-            this.selected.splice(0, this.selected.length);
-            this.selected.push(elt);
-          }
-
-          //Manual multiselection using the control modifier key
-        } else if (
-          !["body", "html"].includes(elt.tagName.toLowerCase()) &&
-          this.ctrlDown
-        ) {
-          if (!this.selected.includes(elt)) {
-            this.selected.push(elt);
-          } else {
-            this.selected.splice(this.selected.indexOf(elt), 1);
-          }
-        }
-        this.gs.clear();
-        this.gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
-
-        //Handler overrides: prevent all handlers in workspace document from being called
-        e.stopPropagation();
-        e.preventDefault();
-      },
-      // Make hook alpha
-      true
-    );
-
-    /**
-     * @mousedown hook gets starting position data for multiselection
-     * overlay and
-     * !experimental positioning with shift modifier
-     */
-    this.root.contentDocument!.addEventListener(
-      "mousedown",
-      (e: MouseEvent) => {
-        if (this.shiftDown) {
-          var elt = e.target! as HTMLElement;
-          if (this.selected.includes(elt)) {
-            this.selected.forEach((element) => {
-              if (!element.style.position) element.style.position = "relative";
-            });
-
-            this.mouseDown = true;
-            this.offset = [
-              parseInt(this.root.contentWindow!.getComputedStyle(elt).left) ||
-                0,
-              parseInt(this.root.contentWindow!.getComputedStyle(elt).top) || 0,
-            ];
-            this.start = [
-              e.clientX - this.offset[0],
-              e.clientY - this.offset[1],
-            ];
-          }
-        } else if (this.ctrlDown) {
-          //multiselect
-          this.mouseDown = true;
-          this.start = [e.clientX, e.clientY];
-        }
-      }
-    );
-    /**
-     * @mouseup hook gets end position after multiselection operation
-     */
-    this.root.contentDocument!.addEventListener(
-      "mouseup",
-      (event: MouseEvent) => {
-        if (this.mouseDown) {
-          this.mouseDown = false;
-
-          if (this.wasDragging) {
-            this.wasDragging = false;
-          } else if (this.wasSelecting) {
-            this.wasSelecting = false;
-            this.selected.splice(0, this.selected.length);
-
-            this.walkTheDOM(this.root.contentDocument?.body as Node, (node) => {
-              const elt = node as HTMLElement;
-
-              if (elt != this.gs.getRoot()) {
-                const rect = elt.getBoundingClientRect();
-                var x = this.start[0];
-                var y = this.start[1];
-                var w = event.x - x;
-                var h = event.y - y;
-
-                //hit detection
-                if (w < 0 && h >= 0) {
-                  x = event.x;
-                  w = -w;
-                } else if (h < 0 && w >= 0) {
-                  y = event.y;
-                  h = -h;
-                } else if (w < 0 && h < 0) {
-                  x = event.x;
-                  w = -w;
-                  y = event.y;
-                  h = -h;
-                }
-
-                if (
-                  rect.x < x + w &&
-                  rect.x + rect.width > x &&
-                  rect.y < y + h &&
-                  rect.height + rect.y > y
-                ) {
-                  this.selected.push(elt);
-                }
-
-                return false;
-              }
-
-              return true;
-            });
-            this.gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
-          }
-          this.start = [];
-        }
-      }
-    );
-
-    /** @mousemove hook gets current position data for multiselection
-     * overlay and
-     * !experimental positioning with shift modifier
-     */
-    this.root.contentDocument!.addEventListener(
-      "mousemove",
-      (e: MouseEvent) => {
-        if (this.mouseDown && this.shiftDown) {
-          this.selected.forEach((elt) => {
-            elt.classList.add("omo");
-          });
-
-          this.wasDragging = true;
-
-          var delX = e.clientX - this.start[0];
-          var delY = e.clientY - this.start[1];
-
-          this.top = delY;
-          /*  this.styleParser.update(".omo", "left", delX + "px");
-          this.styleParser.update(".omo", "top", delY + "px");
-
-          //todo:should be a function
-          this.styleSheet.innerHTML = this.styleParser.print()
-            ? (this.styleParser.print() as string)
-            : ""; */
-        } else if (this.mouseDown && this.ctrlDown) {
-          this.wasSelecting = true;
-          this.gs.clear();
-          this.gs.drawOverlay([...this.start, e.clientX, e.clientY]);
-        }
-      }
-    );
-
-    /**
-     * @dragstart hook overrides default drag behaviour if modifiers
-     * are active
-     */
-    this.root.contentDocument!.addEventListener(
-      "dragstart",
-      (e: MouseEvent) => {
-        if (this.shiftDown || this.ctrlDown) {
-          e.stopPropagation();
-          e.preventDefault();
-        }
-      },
-      //Make hook alpha
-      true
-    );
-
-    /**
-     * @keydown hook handles key events to set modifier
-     * flags
-     */
-    this.root.contentDocument!.addEventListener(
-      "keydown",
-      (e: KeyboardEvent) => {
-        if (e.shiftKey && !this.shiftDown) {
-          this.shiftDown = true;
-        } else if (e.ctrlKey && !this.ctrlDown) {
-          this.ctrlDown = true;
-        } else if (e.altKey && !this.altDown) {
-          this.altDown = true;
-        } else if (e.key === "z" && this.ctrlDown) {
-          if (!this.editing) {
-            e.preventDefault();
-            if (this.altDown) {
-              this.historyService.redo();
-            } else this.historyService.undo();
-            this.gs.clear();
-            this.gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
-          }
-        }
-      }
-    );
-
-    /**
-     * @keyup hook handles key events to set modifier
-     * flags
-     */
-    this.root.contentDocument!.addEventListener("keyup", (e: KeyboardEvent) => {
-      if (this.shiftDown && !e.shiftKey) {
-        this.shiftDown = false;
-      } else if (!e.ctrlKey && this.ctrlDown) {
-        this.ctrlDown = false;
-      } else if (!e.altKey && this.altDown) {
-        this.altDown = false;
-      }
-    });
   }
 }
 </script>
@@ -411,7 +141,7 @@ input {
   overflow: hidden;
 }
 .pane {
-  padding: 5px;
+  padding: 4px;
   background: rgba(8, 8, 8, 0.658);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -432,7 +162,7 @@ input {
   z-index: 99;
 }
 .top-pane {
-  height: 50px;
+  height: 40px;
   margin: 1px 0 1px 0;
 }
 .background {

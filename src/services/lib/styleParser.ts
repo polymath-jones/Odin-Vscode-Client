@@ -8,6 +8,12 @@
  * delete(rs, - , - ) delete rule
  * delete(rs, os , - ) delete a selector from rule and return new rule selector
  * delete(rs, - , dc ) delete a declaration from rule
+ * 
+ * get(rs, dc) get declaration value or return undefined if it does not exist
+ * get(rs, -) get selector or return undefined if it does not exist
+ * get(-,-) get all rules in stylesheet
+ * 
+ * update(rs,dc,nv) update declaration with new value
  */
 export class StyleParser {
 
@@ -69,44 +75,72 @@ export class StyleParser {
         }
 
     }
-    get(ruleSelectors: string, declaration: string): string | undefined {
+    get(objectType: boolean, ruleSelectors?: string, declaration?: string): Array<object> | object | string | undefined {
 
-        const sortedSelList = this.formatSelector(ruleSelectors);
-        const decMap = this.cache[sortedSelList]
-        var cached = false
-        if (decMap)
-            cached = declaration in decMap
+        if (ruleSelectors) {
+            const sortedSelList = this.formatSelector(ruleSelectors);
+            const decMap = this.cache[sortedSelList]
+            
+            //get declaration
+            if (declaration) {
+               
+                    let value: string | undefined | object = undefined
 
-        if (!cached) {
-            var now = Date.now()
+                    this.styleSheet.getRules().forEach((rule: any) => {
+                        var sels = rule.getSelectors()
+                        var decs = rule.getDeclarations()
+                        var sortedSels = this.formatSelector(sels.toString())
+                        var eq = sortedSelList == sortedSels
+                        if (eq && decs) {
+
+                            decs.forEach((dec: any) => {
+
+                                if (dec.getNameAsString() == declaration) {
+
+                                    const decMap = this.cache[sortedSelList]
+                                    if (!decMap) this.cache[sortedSelList] = { [declaration]: dec }
+                                    else decMap[declaration] = dec;
+
+
+                                    value = objectType ? dec : dec.getValue().getText() as string
+
+                                }
+                            })
+                        }
+                    });
+                    return value
+                
+            }
+            //get rule
+            else {
+                if (decMap) {
+                    return sortedSelList
+                }
+                let value: object | undefined = undefined
+                this.styleSheet.getRules().forEach((rule: any) => {
+                    var sels = rule.getSelectors()
+                    var sortedSels = this.formatSelector(sels.toString())
+                    var eq = sortedSelList == sortedSels
+                    if (eq) {
+                        value = rule
+                    }
+                });
+                return value
+            }
+        }
+        //get all rules
+        else {
+            var rules = new Array<string>()
             this.styleSheet.getRules().forEach((rule: any) => {
                 var sels = rule.getSelectors()
-                var decs = rule.getDeclarations()
                 var sortedSels = this.formatSelector(sels.toString())
-                var eq = sortedSelList == sortedSels
-                if (eq) {
-                    decs.forEach((dec: any) => {
+                rules.push(sortedSels)
+            })
 
-                        if (dec.getNameAsString() == declaration) {
-
-                            const decMap = this.cache[sortedSelList]
-                            if (!decMap) this.cache[sortedSelList] = { [declaration]: dec }
-                            else decMap[declaration] = dec;
-
-                            return dec.getValue();
-
-                        }
-                    })
-                }
-
-            });
-            console.log(Date.now() - now + ':ms before caching')
-
+            return rules
         }
-        else {
-            return this.cache[sortedSelList][declaration].getValue()
-        }
-        return undefined
+
+
     }
     create(ruleSelectors?: string, newSelectors?: string, declarations?: string) {
 
@@ -117,7 +151,7 @@ export class StyleParser {
                 this.styleSheet.insertRule(
                     new this.AST.Rule(
                         this.parser.parseSelectors(newSelectors),
-                        null
+                        this.parser.parseDeclarations(`{}`)
                     )
                 )
             }
@@ -161,13 +195,15 @@ export class StyleParser {
                     this.styleSheet.getRules().forEach((rule: any) => {
 
                         var sels = rule.getSelectors()
-                        var decs = rule.getDeclarations()
                         var sortedSels = this.formatSelector(sels.toString())
                         var eq = sortedSelList == sortedSels
                         if (eq) {
                             this.parser.parseDeclarations(declarations).forEach((dec: any) => {
-                                if (this.get(ruleSelectors, dec.getNameAsString()) == undefined)
-                                    decs.insertDeclaration(dec)
+
+                                if (this.get(false, ruleSelectors, dec.getNameAsString()) == undefined) {
+                                    rule.insertDeclaration(dec, 0)
+                                }
+
                             });
                         }
 
@@ -205,6 +241,12 @@ export class StyleParser {
         if (ruleSelectors && !oldSelector && !declaration) {
             //delete rule
             const sortedSelList = this.formatSelector(ruleSelectors)
+            const decMap = this.cache[sortedSelList]
+
+            if (decMap) {
+                delete this.cache[sortedSelList]
+            }
+
             const rules = this.styleSheet.getChildren()[0].getChildren()
 
             for (var j = 0; j < rules.length; j++) {
@@ -217,6 +259,7 @@ export class StyleParser {
                 }
 
             }
+
 
         }
         else if (ruleSelectors && oldSelector) {
@@ -317,7 +360,7 @@ export class StyleParser {
         }
     }
     print(): string | void {
-     //   console.log(this.PrettyPrinter.beautify(this.styleSheet));
+        //   console.log(this.PrettyPrinter.beautify(this.styleSheet));
         return this.PrettyPrinter.beautify(this.styleSheet);
     }
 }
