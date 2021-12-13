@@ -37,17 +37,31 @@ export class StateService {
         //parse asts and call emitters
     }
     deconstruct(src: string) {
-        this.styleParser = new StyleParser('')
-        this.styleParser.create(
-            undefined,
-            ".omo",
-            `{ 
-          position:relative;
-          top:initial; 
-          left:initial;
-          background-color: initial;
-        }`
-        );
+        this.styleParser = new StyleParser(`
+        html, body {
+            border: 0px;
+            margin: 0px;
+            padding: 0px;
+        }
+        body{
+            background-color: #57575B;
+        }
+        body::-webkit-scrollbar-track {
+            -webkit-box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.123);
+            border-radius: 10px;
+            background-color: #84828E;
+        }
+
+        body::-webkit-scrollbar {
+            width: 8px;
+            background-color: #84828E;
+        }
+
+        body::-webkit-scrollbar-thumb {
+            border-radius: 10px;
+            -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.205);
+            background-color: #313133;
+        }`)
 
     }
     getStyleParser(): StyleParser {

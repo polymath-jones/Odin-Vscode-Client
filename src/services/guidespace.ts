@@ -169,12 +169,13 @@ export class Guidespace implements Space {
         switch (mode) {
             case SELECTION_MODE.HIGHLIGHT: {
                 //To achieve 1px lines
-
                 const elt = elts[0];
                 if (elt.getAttribute("contenteditable") !== "true") {
                     this.context.strokeStyle = "#178df7";
+                    this.context.fillStyle = "#178df7";
                     if (elt.getAttribute('draggable') !== 'true') {
                         this.context.strokeStyle = "#f10e0e";
+                        this.context.fillStyle = "#f10e0e";
                     }
 
                     const offset = this.optimize ? 0 : 0.5;
@@ -187,6 +188,15 @@ export class Guidespace implements Space {
                     const w = Math.floor(rect.width);
                     const h = Math.floor(rect.height);
                     this.context.strokeRect(x, y, w, h)
+
+                    //text
+                    this.context.font = "14px Gilroy";
+                    if (y > 20)
+                        this.context.fillText(elt.tagName.toLowerCase() + `.${elt.classList.value}`, x, y - 4);
+                    else
+                        this.context.fillText(elt.tagName.toLowerCase() + `.${elt.classList.value}`, x, y + h + 12);
+
+
                 }
 
                 // this.drawPaddings(elt);
@@ -202,8 +212,10 @@ export class Guidespace implements Space {
                             this.context.beginPath();
                             const offset = 0;
                             this.context.strokeStyle = "#178df7";
+                            this.context.fillStyle = "#178df7";
                             if (elt.getAttribute('draggable') !== 'true') {
                                 this.context.strokeStyle = "#f10e0e";
+                                this.context.fillStyle = "#f10e0e";
                             }
                             this.context.lineWidth = 2;
 
@@ -213,6 +225,14 @@ export class Guidespace implements Space {
                             const w = Math.floor(rect.width);
                             const h = Math.floor(rect.height);
                             this.context.strokeRect(x, y, w, h);
+
+                             //text
+                    this.context.font = "14px Gilroy";
+                    if (y > 20)
+                        this.context.fillText(elt.tagName.toLowerCase() + `.${elt.classList.value}`, x, y - 4);
+                    else
+                        this.context.fillText(elt.tagName.toLowerCase() + `.${elt.classList.value}`, x, y + h + 12);
+
                         }
 
                     })
@@ -297,7 +317,7 @@ export class Guidespace implements Space {
 
     static getInstance(): Guidespace {
         if (instance != undefined) {
-            console.log('returning same instance');
+            // console.log('returning same instance');
             return instance
         }
         else

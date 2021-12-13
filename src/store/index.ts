@@ -10,6 +10,13 @@ export default createStore({
       "flex-shrink": undefined,
       "flex-wrap": undefined,
       "float": undefined
+    },
+    viewData: {
+      showPanels: true,
+      windowBreakpoints: {
+        min: 0,
+        max: 0
+      }
     }
   },
   mutations: {

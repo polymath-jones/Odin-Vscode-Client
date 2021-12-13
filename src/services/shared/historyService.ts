@@ -33,7 +33,7 @@ export enum OPERTATION_TYPE {
     DOM, STYLE, SCRIPT
 }
 export enum OPERTATION_MODE {
-    DELETE, UPDATE, CREATE, UPDATE_DECLARATION, DELETE_DECLARATION, DELETE_SELECTOR, DELETE_RULE, CREATE_DECLARATION, CREATE_SELECTOR, CREATE_RULE
+    DELETE, UPDATE, CREATE, UPDATE_TEXT, UPDATE_DECLARATION, DELETE_DECLARATION, DELETE_SELECTOR, DELETE_RULE, CREATE_DECLARATION, CREATE_SELECTOR, CREATE_RULE
 }
 
 export type StyleOperands = {
@@ -51,6 +51,8 @@ export type DomOperands = {
     previousSibling: HTMLElement;
     parent: HTMLElement;
     previousParent: HTMLElement;
+    previousText: string;
+    text: string;
 }
 export type ScriptOperand = {
 
@@ -91,7 +93,6 @@ export class HistoryService {
         if (this.redoStack.length > 0) {
             this.redoStack.splice(0)
         }
-
         this.undoStack.push(state);
     }
     undo() {
@@ -133,6 +134,11 @@ export class HistoryService {
                             const operands = state.operands as DomOperands
                             TemplateEditors.deleteInDOM(operands.element);
                             break
+                        }
+                        case OPERTATION_MODE.UPDATE_TEXT: {
+                            const operands = state.operands as DomOperands
+                            operands.element.innerHTML = operands.previousText
+                            break;
                         }
                     }
 
@@ -217,6 +223,11 @@ export class HistoryService {
 
                             }
                             break
+                        }
+                        case OPERTATION_MODE.UPDATE_TEXT: {
+                            const operands = state.operands as DomOperands
+                            operands.element.innerHTML = operands.text
+                            break;
                         }
                     }
 

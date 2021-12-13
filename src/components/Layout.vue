@@ -40,7 +40,7 @@ export default class Layout extends Vue {
       for (let i = 0; i < this.buttons.length; i++) {
         this.buttons[i].state = value == this.buttons[i].caption;
       }
-      console.log(value);
+     // console.log(value);
     });
   }
 

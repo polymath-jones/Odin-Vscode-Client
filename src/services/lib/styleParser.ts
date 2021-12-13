@@ -80,7 +80,7 @@ export class StyleParser {
         if (ruleSelectors) {
             const sortedSelList = this.formatSelector(ruleSelectors);
             const decMap = this.cache[sortedSelList]
-            
+
             //get declaration
             if (declaration) {
                
@@ -288,7 +288,7 @@ export class StyleParser {
                         if (todelete == selector) {
                             rule.deleteSelector(j);
                             if (sels.getChildren().length == 0) {
-                                this.styleSheet.deleteRule(i);
+                                this.styleSheet.deleteRule(j);
                             } else {
                                 return this.formatSelector(rule.getSelectors().toString())
                             }
@@ -315,11 +315,11 @@ export class StyleParser {
                 if (eq) {
 
                     var decs = rule.getDeclarations()
-
-                    for (var i = 0; i < decs._nodes.length; i++) {
-                        var dec = decs[i];
+                    
+                    for (var j = 0; j < decs._nodes.length; j++) {
+                        var dec = decs[j];
                         if (dec.getNameAsString() == declaration) {
-                            rule.deleteDeclaration(i);
+                            rule.deleteDeclaration(j);    
                         }
                     }
                 }

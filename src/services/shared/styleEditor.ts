@@ -31,4 +31,16 @@ export namespace StyleEditors {
         if (styleSheet) styleSheet.innerHTML = styleParser.print() ? (styleParser.print() as string) : "";
     }
 
+    
+    /* this.styleParser.create(
+        undefined,
+        ".omo",
+        `{ 
+      position:relative;
+      top:initial; 
+      left:initial;
+      background-color: initial;
+    }`
+    ); */
+
 }

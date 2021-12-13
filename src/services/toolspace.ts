@@ -11,7 +11,6 @@ import { StyleEditors } from "../services/shared/styleEditor";
 import { StateService } from "../services/shared/stateService";
 import { HistoryService, OPERTATION_MODE, OPERTATION_TYPE, State } from "../services/shared/historyService";
 import { Guidespace, SELECTION_MODE } from "../services/guidespace";
-import { mapMutations, useStore } from 'vuex'
 import store from "@/store";
 
 

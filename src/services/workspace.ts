@@ -6,6 +6,7 @@ import ResizeObserver from 'resize-observer-polyfill';
 import * as xmlDom from 'xmldom'
 import { HistoryService, OPERTATION_MODE, OPERTATION_TYPE, State } from './shared/historyService';
 import { Toolspace } from './toolspace';
+
 var instance: Workspace;
 
 
@@ -32,6 +33,7 @@ export class Workspace implements Space {
         //Disable context menu
         iframe.contentDocument?.body.setAttribute('oncontextmenu', 'return false');
         iframe.contentWindow?.focus();
+        //iframe.contentDocument!.designMode = "on"
 
 
 
@@ -264,14 +266,22 @@ export class Workspace implements Space {
         var color = "";
         var display = "";
 
+        let startHtml: string
 
 
 
+
+        //Scrollbar.init(iframe.contentDocument!.querySelector('body')! );
 
         window.addEventListener('resize', (ev) => {
             const rect = iframe.parentElement?.getBoundingClientRect()
             if (this.scale != 0)
                 this.resizeWorkspace(rect!)
+        })
+
+        document.querySelector("#workspace")?.addEventListener('mouseleave', e => {
+            gs.clear()
+            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
         })
 
         //Resize Hook using the ResizeObserver api
@@ -286,8 +296,8 @@ export class Workspace implements Space {
         });
         //Observe the body's size
         this.resizeObserver.observe(iframe.contentDocument?.querySelector('body')!)
-        
-       // this.scaleWorkspace(1500)
+
+        // this.scaleWorkspace(1500)
         //Redraw guidespace on scroll
         iframe.contentWindow!.onscroll = (e) => {
             gs.clear()
@@ -302,6 +312,8 @@ export class Workspace implements Space {
             editing = true;
             var elt = e.target as HTMLElement;
             if (currentEditable !== elt) {
+
+                startHtml = elt.innerHTML
                 currentEditable = elt;
                 display = elt.style.display.toString();
                 elt.setAttribute("contenteditable", "true");
@@ -328,12 +340,19 @@ export class Workspace implements Space {
 
             //Reset contenteditable
             if (currentEditable && elt != currentEditable) {
+
+                if(startHtml !== currentEditable.innerHTML){
+                    this.saveDomTextUpdateToHistory(currentEditable,startHtml, currentEditable.innerHTML)
+                }
+
                 editing = false;
                 Workspace.getInstance().toggleDraggable(currentEditable, true);
                 currentEditable.setAttribute("contenteditable", "false");
                 currentEditable.style.display = display;
                 currentEditable.style.cursor = "initial";
                 currentEditable = undefined;
+
+
             }
 
             //Single selection. If previous action was multiselection, then reset.
@@ -496,7 +515,7 @@ export class Workspace implements Space {
                       ? (this.styleParser.print() as string)
                       : ""; */
                 } else if (mouseDown && ctrlDown) {
-                    console.log('moving mouse with control');
+                    // console.log('moving mouse with control');
 
                     wasSelecting = true;
                     gs.clear();
@@ -504,7 +523,8 @@ export class Workspace implements Space {
                 }
                 else if (!dragging) {
                     gs.clear()
-                    gs.drawSelected([elt], SELECTION_MODE.HIGHLIGHT)
+                    if (!this.selected.includes(elt))
+                        gs.drawSelected([elt], SELECTION_MODE.HIGHLIGHT)
                     gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
                 }
             },
@@ -1047,7 +1067,7 @@ export class Workspace implements Space {
         });
 
     }
-
+    
     walkTheDOM(start: Node, func: (node: Node) => boolean) {
         const dive = func(start);
         var node = dive ? start.firstChild! : start.nextSibling;
@@ -1087,7 +1107,18 @@ export class Workspace implements Space {
         var gid = s4() + s4() + "_" + s4();
         return gid;
     }
-
+    saveDomTextUpdateToHistory(element: HTMLElement, previousText: string, text: string) {
+        const state: State = {
+            operationType: OPERTATION_TYPE.DOM,
+            operationMode: OPERTATION_MODE.UPDATE_TEXT,
+            operands: {
+                element: element,
+                previousText: previousText,
+                text: text
+            }
+        }
+        this.historyService.push(state)
+    }
     saveDomUpdateToHistory(relative: HTMLElement, element: HTMLElement, mode: PLACEMENT_MODE) {
         switch (mode) {
             case PLACEMENT_MODE.BEFORE: {
@@ -1456,6 +1487,55 @@ export class Workspace implements Space {
      * Workspace on drag over uitility funcitions
      * 
      *  */
+     compareNodes(nodes1: Array<Node>, nodes2: Array<Node>): boolean {
+        if (nodes1.length !== nodes2.length)
+            return false
+        for (let i = 0; i < nodes2.length; i++) {
+            if (nodes1[i].nodeValue !== nodes2[i].nodeValue)
+                return false
+        }
+        return true
+    }
+    private getTextNodesIn(node: Node, includeWhitespaceNodes: boolean, clone: boolean) {
+        const textNodes = new Array<Node>()
+        const whitespace = /^\s*$/;
+        const getTextNodes = (node: Node) => {
+            if (node.nodeType == 3) {
+                if (includeWhitespaceNodes || !whitespace.test(node.nodeValue!)) {
+                    if (clone)
+                        textNodes.push(node.cloneNode());
+                    else
+                        textNodes.push(node);
+
+                }
+            } else {
+                for (var i = 0, len = node.childNodes.length; i < len; ++i) {
+                    getTextNodes(node.childNodes[i]);
+                }
+            }
+        }
+        getTextNodes(node);
+        return textNodes;
+    }
+    private removeTextNodesIn(input: Node, includeWhitespaceNodes: boolean) {
+        const whitespace = /^\s*$/;
+        let parent = input
+        const getTextNodes = (node: Node) => {
+            if (node) {
+                if (node.nodeType == 3) {
+                    if (includeWhitespaceNodes || !whitespace.test(node.nodeValue!)) {
+                        parent.removeChild(node)
+                    }
+                } else {
+                    for (var i = 0, len = node.childNodes.length; i < len; ++i) {
+                        parent = node
+                        getTextNodes(node.childNodes[i]);
+                    }
+                }
+            }
+        }
+        getTextNodes(input);
+    }
 
     private calculateDistance(x: number, y: number, mouseX: number, mouseY: number): number {
         return Math.sqrt(Math.pow(x - mouseX, 2) + Math.pow(y - mouseY, 2));
