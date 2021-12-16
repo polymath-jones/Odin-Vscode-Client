@@ -6,6 +6,8 @@ import ResizeObserver from 'resize-observer-polyfill';
 import * as xmlDom from 'xmldom'
 import { HistoryService, OPERTATION_MODE, OPERTATION_TYPE, State } from './shared/historyService';
 import { Toolspace } from './toolspace';
+import store from "@/store";
+
 
 var instance: Workspace;
 
@@ -34,9 +36,6 @@ export class Workspace implements Space {
         iframe.contentDocument?.body.setAttribute('oncontextmenu', 'return false');
         iframe.contentWindow?.focus();
         //iframe.contentDocument!.designMode = "on"
-
-
-
 
         //this.testXmlDom();
 
@@ -224,7 +223,9 @@ export class Workspace implements Space {
 
 
 
+
     }
+
 
     getRoot(): HTMLElement {
         return this.root;
@@ -274,9 +275,12 @@ export class Workspace implements Space {
         //Scrollbar.init(iframe.contentDocument!.querySelector('body')! );
 
         window.addEventListener('resize', (ev) => {
-            const rect = iframe.parentElement?.getBoundingClientRect()
-            if (this.scale != 0)
-                this.resizeWorkspace(rect!)
+
+            if (window.innerWidth < 1200) {
+                store.commit('setAppState', { disabled: true, message: "Window Width is too Small!!" })
+            }
+
+
         })
 
         document.querySelector("#workspace")?.addEventListener('mouseleave', e => {
@@ -289,7 +293,6 @@ export class Workspace implements Space {
 
             const zoomRatio = this.getPixelRatio()
             console.log('window zoom level: ' + Math.round(zoomRatio * 100) + '%');
-
             gs.reset(false)
             gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
 
@@ -341,8 +344,8 @@ export class Workspace implements Space {
             //Reset contenteditable
             if (currentEditable && elt != currentEditable) {
 
-                if(startHtml !== currentEditable.innerHTML){
-                    this.saveDomTextUpdateToHistory(currentEditable,startHtml, currentEditable.innerHTML)
+                if (startHtml !== currentEditable.innerHTML) {
+                    this.saveDomTextUpdateToHistory(currentEditable, startHtml, currentEditable.innerHTML)
                 }
 
                 editing = false;
@@ -540,7 +543,7 @@ export class Workspace implements Space {
         this.root.contentDocument!.addEventListener("dragstart", (e: MouseEvent) => {
             iframe.focus()
             const elt = e.target as HTMLElement;
-            if (elt.getAttribute("draggable") == "true" && !(shiftDown || ctrlDown)) {
+            if (elt.getAttribute("odin-locked") !== "true" && !(shiftDown || ctrlDown)) {
                 dragging = true;
                 currentDraggable = elt
                 this.toggleDropZone(currentDraggable, false, false)
@@ -550,6 +553,8 @@ export class Workspace implements Space {
                 }
             }
             else {
+                console.log("stopiing prop");
+
                 e.preventDefault()
                 e.stopPropagation()
                 return false
@@ -869,7 +874,9 @@ export class Workspace implements Space {
                     lkeyDown = true
 
                     this.selected.forEach(elt => {
-                        this.toggleDraggable(elt, true);
+                        if (!elt.hasAttribute("odin-locked"))
+                            elt.setAttribute('odin-locked', 'false')
+                        this.toggleLock(elt, true);
                         this.toggleDropZone(elt, true)
                     })
                     gs.clear()
@@ -885,7 +892,9 @@ export class Workspace implements Space {
                         console.log(' locking does not work with multiselection');
                     var elt = this.selected[0]
                     if (elt) {
-                        this.toggleDraggable(elt, false);
+                        if (!elt.hasAttribute("odin-locked"))
+                            elt.setAttribute('odin-locked', 'false')
+                        this.toggleLock(elt, false);
                         this.toggleDropZone(elt, false)
                     }
                     gs.clear()
@@ -986,7 +995,9 @@ export class Workspace implements Space {
                     lkeyDown = true
 
                     this.selected.forEach(elt => {
-                        this.toggleDraggable(elt, true);
+                        if (!elt.hasAttribute("odin-locked"))
+                            elt.setAttribute('odin-locked', 'false')
+                        this.toggleLock(elt, true);
                         this.toggleDropZone(elt, true)
                     })
                     gs.clear()
@@ -1002,13 +1013,14 @@ export class Workspace implements Space {
                         console.log(' locking does not work with multiselection');
                     var elt = this.selected[0]
                     if (elt) {
-                        this.toggleDraggable(elt, false);
+                        if (!elt.hasAttribute("odin-locked"))
+                            elt.setAttribute('odin-locked', 'false')
+                        this.toggleLock(elt, false);
                         this.toggleDropZone(elt, false)
                     }
                     gs.clear()
                     gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
                 }
-
             }
             else if (!pkeyDown && e.key === "p") {
 
@@ -1067,7 +1079,7 @@ export class Workspace implements Space {
         });
 
     }
-    
+
     walkTheDOM(start: Node, func: (node: Node) => boolean) {
         const dive = func(start);
         var node = dive ? start.firstChild! : start.nextSibling;
@@ -1091,13 +1103,6 @@ export class Workspace implements Space {
         }
 
     }
-
-    resizeWorkspace(rect: DOMRect) {
-        const root = this.root;
-        root.style.minWidth = rect.width / this.scale + "px";
-        root.style.minHeight = rect.height / this.scale + "px";
-    }
-
     generateID(): string {
         let s4 = () => {
             return Math.floor((1 + Math.random()) * 0x10000)
@@ -1356,6 +1361,85 @@ export class Workspace implements Space {
         }
     }
 
+    checkLock(elt: HTMLElement) {
+        if (!elt.hasAttribute("odin-locked"))
+            elt.setAttribute("odin-locked", "false")
+    }
+
+    toggleLock(elt: HTMLElement, single: boolean, setTrue?: boolean) {
+
+        //toggle locked single
+        if (single && setTrue == undefined) {
+            this.checkLock(elt)
+            if (elt.getAttribute("odin-locked") == "true")
+                elt.setAttribute("odin-locked", "false")
+            else
+                elt.setAttribute("odin-locked", "true")
+
+
+        } //toggle locked children
+        else if (!single && setTrue == undefined) {
+            elt.querySelectorAll("*").forEach((elt) => {
+                this.checkLock(elt as HTMLElement)
+                if (elt.getAttribute("odin-locked") == "true")
+                    elt.setAttribute("odin-locked", "false")
+                else
+                    elt.setAttribute("odin-locked", "true")
+
+            })
+            //element itself
+            this.checkLock(elt )
+                if (elt.getAttribute("odin-locked") == "true")
+                    elt.setAttribute("odin-locked", "false")
+                else
+                    elt.setAttribute("odin-locked", "true")
+
+
+        }
+        //turn on locked for one element
+        else if (single && setTrue) {
+            this.checkLock(elt)
+            if (elt.getAttribute("odin-locked") !== "true") {
+                elt.setAttribute("odin-locked", "true")
+            }
+
+        }
+        //turn off locked for one element
+        else if (single && !setTrue) {
+            this.checkLock(elt)
+            if (elt.getAttribute("odin-locked") == "true") {
+                elt.setAttribute("odin-locked", "false")
+            }
+
+            //turn on locked for element and children
+        } else if (!single && setTrue) {
+            elt.querySelectorAll("*").forEach((elt) => {
+                this.checkLock(elt as HTMLElement)
+                if (elt.getAttribute("odin-locked") !== "true") {
+                    elt.setAttribute("odin-locked", "true")
+                }
+            })
+            //element itself
+            this.checkLock(elt)
+            if (elt.getAttribute("odin-locked") !== "true") {
+                elt.setAttribute("odin-locked", "true")
+            }
+            //turn off locked for element and children    
+        } else if (!single && !setTrue) {
+
+            elt.querySelectorAll("*").forEach((elt) => {
+                this.checkLock(elt as HTMLElement)
+                if (elt.getAttribute("odin-locked") == "true") {
+                    elt.setAttribute("odin-locked", "false")
+                }
+            })
+            //element itself
+            this.checkLock(elt)
+            if (elt.getAttribute("odin-locked") == "true") {
+                elt.setAttribute("odin-locked", "false")
+            }
+        }
+    }
     toggleDropZone(elt: HTMLElement, single: boolean, setTrue?: boolean) {
 
         //toggle dropzone
@@ -1487,7 +1571,7 @@ export class Workspace implements Space {
      * Workspace on drag over uitility funcitions
      * 
      *  */
-     compareNodes(nodes1: Array<Node>, nodes2: Array<Node>): boolean {
+    compareNodes(nodes1: Array<Node>, nodes2: Array<Node>): boolean {
         if (nodes1.length !== nodes2.length)
             return false
         for (let i = 0; i < nodes2.length; i++) {

@@ -4,7 +4,7 @@
     :class="{
       leftPaneClosed: leftPaneClosed,
       rightPaneClosed: rightPaneClosed,
-      leftRightPaneClosed: leftPaneClosed && rightPaneClosed
+      leftRightPaneClosed: leftPaneClosed && rightPaneClosed,
     }"
   >
     <section class="pane background left-pane">
@@ -21,17 +21,15 @@
           <div class="left-tools">
             <toggle-button
               :id="'toggleLeftPane'"
-              placeholder_1="Hide Left Pane"
-              placeholder_2="Reveal Left Pane"
               @togglePane="handlePaneToggle"
             >
               <img :src="icons['panel']" alt="Toggle panel visibility" />
             </toggle-button>
             <tool-button
               :imageSource="icons['expand']"
-              placeholder="Full View"
               :outlined="true"
               :toogleable="false"
+              placeholder="Full View"
             >
             </tool-button>
           </div>
@@ -64,8 +62,6 @@
             </tool-button>
             <toggle-button
               :id="'toggleRigthPane'"
-              placeholder_1="Hide Right Pane"
-              placeholder_2="Reveal Right Pane"
               @togglePane="handlePaneToggle"
             >
               <img :src="icons['rightPanel']" alt="Toggle panel visibility" />
@@ -74,7 +70,15 @@
         </section>
       </section>
 
-      <section class="workspace-container">
+      <section
+        id="workspace-container"
+        class="workspace-container"
+        :class="{
+          collapsedLeft: leftPaneClosed,
+          collapsedRight: rightPaneClosed,
+          collapsedAll: leftPaneClosed && rightPaneClosed
+        }"
+      >
         <window-resizer>
           <iframe
             @load="loaded"
@@ -96,21 +100,29 @@
           :default="0"
           :wide="true"
         ></toggle-button-stack>
+
+        <!-- styler component -->
       </div>
     </section>
     <panel
       class="left-pane-panel"
       @panelClosed="handlePanelClose"
-      :closed="panelClosed"
+      :closed="false"
       heading="Add Object"
       animation="opacity"
       glassed="true"
-      :width="230"
-      :height="500"
+      :width="400"
+      :height="700"
       :glassed="true"
       fill="#3E3D40D6"
     >
-      <div style="height: 2000px"></div>
+      <editable-select
+        :mini="false"
+        :editable="true"
+        :items="selectTest"
+      ></editable-select>
+
+      <input-dial></input-dial>
     </panel>
   </div>
 </template>
@@ -140,6 +152,8 @@ import ToolButton from "./ToolButton.vue";
 import ToggleButtonStack from "./ToggleButtonStack.vue";
 import WindowResizer from "./WindowResizer.vue";
 import Panel from "./Panel.vue";
+import EditableSelect from "./EditableSelect.vue";
+import InputDial from "./InputDial.vue";
 import Scrollbar from "smooth-scrollbar";
 
 @Options({
@@ -150,8 +164,10 @@ import Scrollbar from "smooth-scrollbar";
     ToggleButton,
     ToolButton,
     ToggleButtonStack,
+    InputDial,
     Panel,
     WindowResizer,
+    EditableSelect,
   },
 })
 export default class HelloWorld extends Vue {
@@ -204,16 +220,12 @@ export default class HelloWorld extends Vue {
     settings: "settings.svg",
   };
 
+  selectTest = new Map<string, { text: string; iconSource: string }>();
   buttonstest: any;
   historyButtons: any;
   rightPaneButtons: any;
   leftPaneButtons: any;
 
-  /*   updateSelected(selected: Array<HTMLElement>, selectedClasses: Array<string>) {
-    this.selected = selected;
-    this.selectedClasses = selectedClasses;
-  }
- */
   beforeMount() {
     StateService.init("");
     this.stateService = StateService.getInstance();
@@ -297,6 +309,19 @@ export default class HelloWorld extends Vue {
         source: this.icons["assets"],
       },
     ];
+
+    this.selectTest.set("item1", {
+      text: "Item 1",
+      iconSource: this.icons["settings"],
+    });
+    this.selectTest.set("item2", {
+      text: "Item 2",
+      iconSource: this.icons["settings"],
+    });
+    this.selectTest.set("item3", {
+      text: "Item 3",
+      iconSource: this.icons["settings"],
+    });
   }
   handlePanelClose() {
     if (!this.panelClosed) this.panelClosed = true;
@@ -363,8 +388,9 @@ export default class HelloWorld extends Vue {
 .rightPaneClosed {
   grid-template-columns: 54px auto 0px;
 }
-.leftRightPaneClosed{
-   grid-template-columns: 0px auto 0px !important;
+
+.leftRightPaneClosed {
+  grid-template-columns: 0px auto 0px !important;
 }
 .left-pane,
 .right-pane {
@@ -376,12 +402,25 @@ export default class HelloWorld extends Vue {
   padding: 40px 4px;
 }
 .workspace-container {
+  background-color: #222222;
   position: relative;
   display: flex;
   flex-flow: column;
   height: 100%;
-  width: auto;
+  max-width: calc(100vw - 314px);
   z-index: 99;
+  border-radius: 10px;
+}
+.collapsedLeft{
+    max-width: calc(100vw - 260px);
+
+}
+.collapsedRight{
+    max-width: calc(100vw - 54px);
+}
+.collapsedAll{
+    max-width: 100vw;
+
 }
 iframe {
   border-radius: 10px;
@@ -399,15 +438,16 @@ iframe {
 }
 
 .left-tools > * {
-  margin-right: 20px;
+  margin-right: 10px;
 }
 .right-tools > * {
-  margin-left: 20px;
+  margin-left: 10px;
 }
 .history-buttons {
   display: flex;
 }
 .top-pane {
+  max-width: 100%;
   padding: 2px;
   height: 40px;
   margin: 1px 0 1px 0;

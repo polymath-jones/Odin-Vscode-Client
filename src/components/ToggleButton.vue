@@ -2,7 +2,7 @@
   <div class="container" @click="handleClick">
     <div class="wrapper">
       <div class="image-wrapper" :class="{ flip: toggled }"><slot></slot></div>
-      <p>{{ placeholder }}</p>
+      <p v-if="placeholder">{{ placeholder }}</p>
     </div>
   </div>
 </template>
@@ -46,6 +46,9 @@ p {
   font-weight: 500;
   font-size: 14px;
   margin: 0 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .container:hover p {
   color: #afadb9;

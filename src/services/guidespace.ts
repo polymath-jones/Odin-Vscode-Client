@@ -173,7 +173,7 @@ export class Guidespace implements Space {
                 if (elt.getAttribute("contenteditable") !== "true") {
                     this.context.strokeStyle = "#178df7";
                     this.context.fillStyle = "#178df7";
-                    if (elt.getAttribute('draggable') !== 'true') {
+                    if (elt.getAttribute('draggable') !== 'true' || elt.getAttribute('odin-locked') == 'true') {
                         this.context.strokeStyle = "#f10e0e";
                         this.context.fillStyle = "#f10e0e";
                     }
@@ -213,7 +213,7 @@ export class Guidespace implements Space {
                             const offset = 0;
                             this.context.strokeStyle = "#178df7";
                             this.context.fillStyle = "#178df7";
-                            if (elt.getAttribute('draggable') !== 'true') {
+                            if (elt.getAttribute('draggable') !== 'true' || elt.getAttribute('odin-locked') == 'true') {
                                 this.context.strokeStyle = "#f10e0e";
                                 this.context.fillStyle = "#f10e0e";
                             }
@@ -249,7 +249,7 @@ export class Guidespace implements Space {
 
         const offset = 0;
         this.context.strokeStyle = "#17f787";
-        if (elt.getAttribute('draggable') !== 'true') {
+        if (elt.getAttribute('draggable') !== 'true'|| elt.getAttribute('odin-locked') == 'true') {
             this.context.strokeStyle = "#ff9500";
         }
         this.context.lineWidth = 2;

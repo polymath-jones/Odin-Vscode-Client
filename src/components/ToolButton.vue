@@ -15,7 +15,7 @@ buttons can be togglable, pressed
     :class="{ outlined: outlined, pilled: pilled, highlighted: highlighted }"
     :style="`background-color: ${fill}`"
   >
-    <div class="wrapper">
+    <div class="wrapper" :class="{ compact: compact }">
       <img
         class="button-image"
         :class="{ pressed: pressed }"
@@ -40,6 +40,7 @@ import { Options, Vue } from "vue-class-component";
     imageSource: String,
     pilled: Boolean,
     id: String,
+    compact:Boolean 
   },
   components: {},
 })
@@ -96,6 +97,9 @@ p {
   font-weight: 500;
   font-size: 14px;
   margin: 0 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .container:hover p {
   color: #afadb9;
@@ -111,6 +115,9 @@ p {
 }
 .pilled {
   border-radius: 100px;
+}
+.compact {
+  padding: 4px 8px;
 }
 .highlighted {
   border-image-source: linear-gradient(

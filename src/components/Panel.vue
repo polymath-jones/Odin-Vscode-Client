@@ -102,9 +102,13 @@ export default class Panel extends Vue {
 }
 hr {
   background-color: #ffff;
-  width: 85%;
-  margin: 13px auto;
+  width: calc(100%-32px);
+  padding: 0px ;
+  margin: 13px 16px;
   opacity: 0.1;
+}
+.panel-content{
+  padding: 16px;
 }
 .closed > * {
   display: none;

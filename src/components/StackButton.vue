@@ -110,6 +110,9 @@ p {
   font-weight: 500;
   font-size: 14px;
   margin: 0 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .container:hover p {
   color: #afadb9;

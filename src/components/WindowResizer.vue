@@ -1,9 +1,9 @@
 <template>
   <div
-    :style="`max-width: ${maxWidth}px;min-width: ${currentWidth}px`"
+    :style="`max-width: ${maxWidth}px; min-width: ${currentWidth}px`"
     ref="resizer"
     class="resizer-container"
-    :class="{highlight: hovering}"
+    :class="{ highlight: mouseDown }"
   >
     <slot></slot>
     <div class="resizer-handle">
@@ -24,6 +24,9 @@
 <script lang ="ts">
 import { Workspace } from "@/services/workspace";
 import { Options, Vue } from "vue-class-component";
+import store from "@/store";
+import ResizeObserver from "resize-observer-polyfill";
+
 @Options({
   props: {},
   components: {},
@@ -33,9 +36,16 @@ export default class WindowResizer extends Vue {
   hovering = false;
   mouseDown = false;
   startX = 0;
-  maxWidth = 0;
   currentWidth = 0;
 
+  get maxWidth(): any {
+    return store.state.viewData.windowConstriants.max; //== 0 ? 100 : value;
+  }
+  get handle(): string {
+    return this.hovering || this.mouseDown
+      ? require("../assets/icons/handleGreen.svg")
+      : require("../assets/icons/handle.svg");
+  }
   handleMouseUp = (ev: MouseEvent) => {
     if (this.mouseDown) this.mouseDown = false;
     if (this.currentWidth > this.maxWidth) this.currentWidth = this.maxWidth;
@@ -47,11 +57,7 @@ export default class WindowResizer extends Vue {
       if (!(this.currentWidth > this.maxWidth)) this.currentWidth -= delta * 2;
     }
   };
-  get handle(): string {
-    return (this.hovering || this.mouseDown)
-      ? require("../assets/icons/handleGreen.svg")
-      : require("../assets/icons/handle.svg");
-  }
+
   highlightBar() {
     if (!this.hovering) this.hovering = true;
   }
@@ -69,10 +75,20 @@ export default class WindowResizer extends Vue {
     }
   }
   mounted() {
-    const elt = this.$refs.resizer as HTMLElement;
-    const rect = elt.parentElement!.getBoundingClientRect();
-    this.maxWidth = rect.width;
-    this.currentWidth = rect.width;
+    var parent = document.querySelector("#workspace-container")!
+    const observer = new ResizeObserver(
+      (entries: Array<ResizeObserverEntry>) => {
+        const width = entries[0].contentRect.width;
+        store.commit("setWindowConstraints", {
+          min: 200,
+          max: width,
+        });
+        if (this.currentWidth > width) this.currentWidth = width;
+      }
+    );
+    observer.observe(parent);
+    this.currentWidth = parent.clientWidth
+    
 
     document.addEventListener("mousemove", this.handleMouseMove);
     document.addEventListener("mouseup", this.handleMouseUp);
@@ -82,7 +98,7 @@ export default class WindowResizer extends Vue {
 
 <style scoped>
 .resizer-container {
-box-sizing: border-box;
+  box-sizing: border-box;
   position: relative;
   margin: auto;
   display: flex;
@@ -112,7 +128,7 @@ box-sizing: border-box;
 .disable {
   pointer-events: none;
 }
-.highlight{
-    /* border: 2px solid #6FCF97; */
+.highlight {
+  outline: #6fcf97 solid 1px;
 }
 </style>
