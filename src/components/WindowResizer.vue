@@ -3,7 +3,7 @@
     :style="`max-width: ${maxWidth}px; min-width: ${currentWidth}px`"
     ref="resizer"
     class="resizer-container"
-    :class="{ highlight: mouseDown }"
+    :class="{ highlight: mouseDown, limited: reachedLimit }"
   >
     <slot></slot>
     <div class="resizer-handle">
@@ -32,15 +32,25 @@ import ResizeObserver from "resize-observer-polyfill";
   components: {},
 })
 export default class WindowResizer extends Vue {
-  //   handle = require("../assets/icons/handle.svg");
   hovering = false;
   mouseDown = false;
   startX = 0;
   currentWidth = 0;
+  reachedLimit = false;
 
   get maxWidth(): any {
-    return store.state.viewData.windowConstriants.max; //== 0 ? 100 : value;
+    const max = store.state.viewData.windowConstriants.max;
+    return max > this.containerWidth ? this.containerWidth : max;
   }
+
+  get minWidth(): any {
+    return store.state.viewData.windowConstriants.min;
+  }
+
+  get containerWidth(): any {
+    return store.state.viewData.windowContainerSize;
+  }
+
   get handle(): string {
     return this.hovering || this.mouseDown
       ? require("../assets/icons/handleGreen.svg")
@@ -49,12 +59,28 @@ export default class WindowResizer extends Vue {
   handleMouseUp = (ev: MouseEvent) => {
     if (this.mouseDown) this.mouseDown = false;
     if (this.currentWidth > this.maxWidth) this.currentWidth = this.maxWidth;
+    if (this.currentWidth < this.minWidth) this.currentWidth = this.minWidth;
+    this.reachedLimit = false;
   };
   handleMouseMove = (ev: MouseEvent) => {
     if (this.mouseDown) {
       const delta = this.startX - ev.clientX;
       this.startX = ev.clientX;
-      if (!(this.currentWidth > this.maxWidth)) this.currentWidth -= delta * 2;
+      if (
+        !(this.currentWidth > this.maxWidth) &&
+        this.currentWidth >= this.minWidth
+      )
+        this.currentWidth -= delta * 2;
+      else {
+        this.reachedLimit = true;
+        if (delta < 0 && this.currentWidth < this.minWidth) {
+          this.currentWidth -= delta * 2;
+          this.reachedLimit = false;
+        } else if (delta > 0 && this.currentWidth >= this.maxWidth) {
+          this.currentWidth -= delta * 2;
+          this.reachedLimit = false;
+        }
+      }
     }
   };
 
@@ -75,23 +101,29 @@ export default class WindowResizer extends Vue {
     }
   }
   mounted() {
-    var parent = document.querySelector("#workspace-container")!
+    var parent = document.querySelector("#workspace-container")!;
     const observer = new ResizeObserver(
       (entries: Array<ResizeObserverEntry>) => {
         const width = entries[0].contentRect.width;
         store.commit("setWindowConstraints", {
-          min: 200,
+          min: 700,
           max: width,
         });
+
+        store.commit("setContainerSize", width);
+
         if (this.currentWidth > width) this.currentWidth = width;
       }
     );
     observer.observe(parent);
-    this.currentWidth = parent.clientWidth
-    
+    this.currentWidth = parent.clientWidth;
 
     document.addEventListener("mousemove", this.handleMouseMove);
     document.addEventListener("mouseup", this.handleMouseUp);
+
+    this.$watch("maxWidth", (value: number, old: number) => {
+      this.currentWidth = value;
+    });
   }
 }
 </script>
@@ -112,7 +144,8 @@ export default class WindowResizer extends Vue {
   border-radius: 0px 10px 0px 0px;
 }
 .resizer-screen {
-  position: absolute;
+  cursor: w-resize;
+  position: fixed;
   top: 0px;
   left: 0px;
   width: calc(100% - 12px);
@@ -123,7 +156,11 @@ export default class WindowResizer extends Vue {
   cursor: w-resize;
   transform: translateY(-50%);
   position: relative;
+  width: 13px;
   top: 0px;
+}
+.limited {
+  outline: #d8d665 solid 1px !important;
 }
 .disable {
   pointer-events: none;

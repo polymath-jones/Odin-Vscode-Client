@@ -277,8 +277,6 @@ export class Guidespace implements Space {
     reset(optimize: boolean) {
         this.optimize = optimize
         this.canvas.setAttribute('style', this.getCanvasStyle());
-        console.log(this.optimize);
-
         this.recalibrate();
         this.clear()
     }

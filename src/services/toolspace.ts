@@ -16,6 +16,10 @@ import store from "@/store";
 
 var instance: Toolspace;
 
+export enum PRELUDES {
+    MOBILE, LANDSCAPE, TABLET, DESKTOP, LARGE
+}
+
 export class Toolspace implements Space {
 
     root: HTMLIFrameElement;
@@ -23,13 +27,35 @@ export class Toolspace implements Space {
     styleSheet: HTMLStyleElement;
     stateService: StateService;
     selectedClasses!: Array<string>;
+    mediaSelectedClasses!: Array<string>;
     historyService: HistoryService;
+    preludes = new Map<PRELUDES, string>()
+    currentPrelude: string | undefined = undefined
 
     private constructor(iframe: HTMLIFrameElement, styleSheet: HTMLStyleElement) {
         this.root = iframe
         this.styleSheet = styleSheet
         this.stateService = StateService.getInstance()
         this.historyService = HistoryService.getInstance()
+        this.preludes.set(PRELUDES.MOBILE, "screen and (max-width: 425px)")
+        this.preludes.set(PRELUDES.LANDSCAPE, "screen and (max-width: 825px)")
+        this.preludes.set(PRELUDES.TABLET, "screen and (max-width: 768px)")
+        this.preludes.set(PRELUDES.DESKTOP, "screen and (max-width: 1200px)")
+        this.preludes.set(PRELUDES.LARGE, "screen and (max-width: 1440px)")
+
+    }
+    checkIfMedia() {
+        const max = store.state.viewData.windowConstriants.max
+        if (max <= 425)
+            this.currentPrelude = this.preludes.get(PRELUDES.MOBILE)
+        else if (max <= 768)
+            this.currentPrelude = this.preludes.get(PRELUDES.TABLET)
+        else if (max <= 825)
+            this.currentPrelude = this.preludes.get(PRELUDES.LANDSCAPE)
+        else if (max <= 1200)
+            this.currentPrelude = this.preludes.get(PRELUDES.DESKTOP)
+        else
+            this.currentPrelude = undefined
     }
 
     getRoot(): HTMLElement {
@@ -38,12 +64,22 @@ export class Toolspace implements Space {
 
     setSelected(selected: Array<HTMLElement>) {
 
+        this.checkIfMedia()
+
         //check if first element has app class
         this.selected = selected;
         const classList = new Array<string>()
         const currentElt = selected[0]
-        const styleRules = this.stateService.getStyleParser().get(false) as Array<string>
+        const styleRules = this.stateService.getStyleParser().get(false, undefined, undefined) as Array<string>
+        const mediaStyleRules = this.stateService.getStyleParser().get(false, undefined, undefined, this.currentPrelude) as Array<string>
         const selectedClasses = new Array<string>()
+        const mediaSelectedClasses = new Array<string>()
+
+        /* 
+        todo:: 
+        add empty rule to default style if styling is reponsive directly. 
+        Check if current class selected class is in media selected classes. Create if it isn't else update
+         */
 
         if (currentElt)
             classList.push(...currentElt.classList)
@@ -53,10 +89,14 @@ export class Toolspace implements Space {
             if (styleRules.includes(`.${val}`)) {
                 selectedClasses.push(val)
             }
+            if (mediaStyleRules.includes(`.${val}`)) {
+                mediaSelectedClasses.push(val)
+            }
 
         })
         this.selected = selected
         this.selectedClasses = selectedClasses
+        this.mediaSelectedClasses = mediaSelectedClasses
         this.updateUIState()
         //console.log(selectedClasses,selected[0]);
 
@@ -82,7 +122,7 @@ export class Toolspace implements Space {
 
         //get corresponding state value from parser and replace
         let mappedEntries = entries.map(entry => {
-            const value = parser.get(false, rule, entry[0]);
+            const value = parser.get(false, rule, entry[0], this.currentPrelude);
             //console.log(value,rule,entry[0]);
             const newEntry = [entry[0], value]
             return newEntry
@@ -92,35 +132,63 @@ export class Toolspace implements Space {
         store.commit('setData', mappedState)
 
     }
-
+    checkLocked(elt: HTMLElement): boolean {
+        if (elt.hasAttribute('odin-locked'))
+            if (elt.getAttribute('odin-locked') == 'true')
+                return true;
+            else
+                return false
+        else
+            return false
+    }
     updateStyle(data: { declartion: string, value: string, precedence: boolean }) {
+
+        this.checkIfMedia()
+        console.log(this.selectedClasses);
+
 
         let gs = Guidespace.getInstance()
         let styleParser = this.stateService.getStyleParser()
 
-        if (this.selected) {
+        if (this.selected && !this.checkLocked(this.selected[0])) {
 
-            if (this.selectedClasses.length == 0) {
-                //generate new class
-                const className = this.selected[0].tagName.toLowerCase() + "-" + this.generateID();
-                this.selectedClasses.push(className);
-                this.stateService.getStyleParser().create(undefined, `.${className}`);
+            if (this.currentPrelude) {
+                if (this.selectedClasses.length == 0) {
+                    //generate new class
+                    const className = this.selected[0].tagName.toLowerCase() + "-" + this.generateID();
+                    this.selectedClasses.push(className);
 
-                if (this.selected.length == 1) {
-                    this.selected[0].classList.add(className);
+                    this.stateService.getStyleParser().create(undefined, `.${className}`, undefined, this.currentPrelude);
+
+                    if (this.selected.length == 1) {
+                        this.selected[0].classList.add(className);
+                    }
+                    else if (this.selected.length > 1) {
+                        this.selected.forEach((elt) => elt.classList.add(className));
+                    }
+
                 }
-                else if (this.selected.length > 1) {
+                else if (this.selectedClasses.length == 0 && this.selected.length > 1) {
+
+                    const className = this.selected[0].tagName.toLowerCase() + "-" + this.generateID();
+                    this.selectedClasses.push(className);
+                    this.stateService.getStyleParser().create(undefined, `.${className}`, undefined, this.currentPrelude);
                     this.selected.forEach((elt) => elt.classList.add(className));
                 }
 
-            }
-            else if (this.selectedClasses.length > 0 && this.selected.length > 1) {
+               /*  if(this.selectedClasses.length ==0 && this.mediaSelectedClasses.length ==0){
+                    const className = this.selected[0].tagName.toLowerCase() + "-" + this.generateID();
+                    this.selectedClasses.push(className);
+                    this.mediaSelectedClasses.push(className);
 
-                const className = this.selected[0].tagName.toLowerCase() + "-" + this.generateID();
-                this.selectedClasses.push(className);
-                this.stateService.getStyleParser().create(undefined, `.${className}`);
-                this.selected.forEach((elt) => elt.classList.add(className));
+                } */
+
+
+
             }
+
+
+
 
             let params = {
                 rule: `.${this.selectedClasses[this.selectedClasses.length - 1]}`,
@@ -129,26 +197,28 @@ export class Toolspace implements Space {
                 precedence: data.precedence
             }
 
-            if (styleParser.get(false, params.rule, params.declaration) == undefined) {
+            if (styleParser.get(false, params.rule, params.declaration, this.currentPrelude) == undefined) {
                 StyleEditors.createDeclaration(
                     params,
                     this.styleSheet,
-                    this.stateService.getStyleParser()
+                    this.stateService.getStyleParser(),
+                    this.currentPrelude
                 );
-                let declaration = this.stateService.getStyleParser().get(true, params.rule, params.declaration)
+                let declaration = this.stateService.getStyleParser().get(true, params.rule, params.declaration, this.currentPrelude)
                 if (declaration)
-                    this.saveStyleDeclarationCreateToHistory(declaration as object, params.value, params.rule)
+                    this.saveStyleDeclarationCreateToHistory(declaration as object, params.value, params.rule, this.currentPrelude)
             } else {
-                let oldValue = this.stateService.getStyleParser().get(false, params.rule, params.declaration)
+                let oldValue = this.stateService.getStyleParser().get(false, params.rule, params.declaration, this.currentPrelude)
                 StyleEditors.updateDeclaration(
                     params,
                     this.styleSheet,
-                    this.stateService.getStyleParser()
+                    this.stateService.getStyleParser(),
+                    this.currentPrelude
                 );
 
-                let declaration = this.stateService.getStyleParser().get(true, params.rule, params.declaration)
+                let declaration = this.stateService.getStyleParser().get(true, params.rule, params.declaration, this.currentPrelude)
                 if (declaration && oldValue)
-                    this.saveStyleDeclarationUpdateToHistory(declaration as object, oldValue as string, params.value, params.rule)
+                    this.saveStyleDeclarationUpdateToHistory(declaration as object, oldValue as string, params.value, params.rule, this.currentPrelude)
             }
             gs.clear()
             gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
@@ -156,6 +226,8 @@ export class Toolspace implements Space {
         }
 
     }
+
+
     generateID(): string {
         let s4 = () => {
             return Math.floor((1 + Math.random()) * 0x10000)
@@ -184,7 +256,7 @@ export class Toolspace implements Space {
     CUD ops for rules do not interract with history service
 
     */
-    saveStyleDeclarationUpdateToHistory(declaration: object, oldValue: string, newValue: string, selector: string) {
+    saveStyleDeclarationUpdateToHistory(declaration: object, oldValue: string, newValue: string, selector: string, mediaPrelude?: string) {
 
         const state: State = {
             operationType: OPERTATION_TYPE.STYLE,
@@ -194,12 +266,13 @@ export class Toolspace implements Space {
                 selector: selector,
                 oldValue: oldValue,
                 newValue: newValue,
+                mediaPrelude: mediaPrelude,
                 stylesheet: this.styleSheet
             }
         }
         this.historyService.push(state)
     }
-    saveStyleDeclarationCreateToHistory(declaration: object, newValue: string, selector: string) {
+    saveStyleDeclarationCreateToHistory(declaration: object, newValue: string, selector: string, mediaPrelude?: string) {
 
         const state: State = {
             operationType: OPERTATION_TYPE.STYLE,
@@ -207,6 +280,7 @@ export class Toolspace implements Space {
             operands: {
                 declaration: declaration,
                 selector: selector,
+                mediaPrelude: mediaPrelude,
                 newValue: newValue,
                 stylesheet: this.styleSheet
             }

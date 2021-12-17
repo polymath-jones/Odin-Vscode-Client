@@ -61,7 +61,30 @@ export class StateService {
             border-radius: 10px;
             -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.205);
             background-color: #313133;
-        }`)
+        }
+
+       
+        
+
+        
+
+        @media screen and (max-width: 1200px) {
+          
+        }
+        @media screen and (max-width: 825px) {
+          
+        }
+        @media screen and (max-width: 768px) {
+          
+        }
+        @media screen and (max-width: 425px) {
+          .go{
+              color: blue !important;
+              display: inline;
+          }
+        }
+
+        `)
 
     }
     getStyleParser(): StyleParser {

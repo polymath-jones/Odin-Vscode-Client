@@ -69,6 +69,7 @@ export default class ToggleButtonStack extends Vue {
         if (!this.states[idx]) {
           //todo emit event
           this.states[idx] = true;
+          this.$emit('stateChanged',idx)
         }
       } else {
         this.states[i] = false;

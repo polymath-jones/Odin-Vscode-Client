@@ -27,9 +27,10 @@ import store from "@/store";
 })
 export default class Layout extends Vue {
   buttons = [
-    { caption: "block", state: false, variant: "outline-primary" },
+    { caption: "block", state: false, variant: "outline-secondary" },
     { caption: "inline", state: false, variant: "outline-secondary" },
-    { caption: "inline-block", state: false, variant: "outline-success" },
+    { caption: "inline-block", state: false, variant: "outline-secondary" },
+    { caption: "none", state: false, variant: "outline-secondary" },
   ];
 
   get display(): any {
@@ -67,7 +68,6 @@ export default class Layout extends Vue {
 <style scoped>
 p {
   color: rgba(255, 255, 255, 0.349);
-  font-family: sans-serif;
   font-size: 16px;
 }
 .outline:focus {

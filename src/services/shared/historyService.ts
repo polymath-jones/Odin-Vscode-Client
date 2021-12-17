@@ -44,6 +44,7 @@ export type StyleOperands = {
     newValue: string;
     selected: Array<HTMLElement>;
     stylesheet: HTMLStyleElement;
+    mediaPrelude: string;
 }
 export type DomOperands = {
     element: HTMLElement;
@@ -158,7 +159,7 @@ export class HistoryService {
                             StyleEditors.updateDeclaration(
                                 { rule: sel, declaration: dec, value: val, precedence: false },
                                 ops.stylesheet,
-                                StateService.getInstance().getStyleParser()
+                                StateService.getInstance().getStyleParser(), ops.mediaPrelude
                             );
                             Toolspace.getInstance().updateUIState()
                             break;
@@ -172,7 +173,7 @@ export class HistoryService {
                             StyleEditors.removeDeclaration(
                                 { rule: sel, declaration: dec },
                                 ops.stylesheet,
-                                StateService.getInstance().getStyleParser()
+                                StateService.getInstance().getStyleParser(), ops.mediaPrelude
                             )
                             Toolspace.getInstance().updateUIState()
                             break;
@@ -245,7 +246,7 @@ export class HistoryService {
                             StyleEditors.updateDeclaration(
                                 { rule: sel, declaration: dec, value: val, precedence: false },
                                 ops.stylesheet,
-                                StateService.getInstance().getStyleParser()
+                                StateService.getInstance().getStyleParser(), ops.mediaPrelude
                             );
                             Toolspace.getInstance().updateUIState()
                             break;
@@ -261,7 +262,7 @@ export class HistoryService {
                             StyleEditors.createDeclaration(
                                 { rule: sel, declaration: dec, value: val, precedence: false },
                                 ops.stylesheet,
-                                StateService.getInstance().getStyleParser()
+                                StateService.getInstance().getStyleParser(), ops.mediaPrelude
                             )
                             Toolspace.getInstance().updateUIState()
                             break;

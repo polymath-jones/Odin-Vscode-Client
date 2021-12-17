@@ -231,6 +231,11 @@ export class Workspace implements Space {
         return this.root;
     }
 
+    resetSelected(){
+        this.selected.splice(0)
+        Guidespace.getInstance().clear()
+    }
+
     /**
    * @registerHooks attaches hooks for disabling the window context menu,
    * resetting the guidespace on window resize, dragging and dropping elements,
@@ -292,7 +297,7 @@ export class Workspace implements Space {
         this.resizeObserver = new ResizeObserver((entries: any) => {
 
             const zoomRatio = this.getPixelRatio()
-            console.log('window zoom level: ' + Math.round(zoomRatio * 100) + '%');
+           // console.log('window zoom level: ' + Math.round(zoomRatio * 100) + '%');
             gs.reset(false)
             gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
 
@@ -314,7 +319,7 @@ export class Workspace implements Space {
         this.root.contentDocument!.addEventListener("dblclick", (e) => {
             editing = true;
             var elt = e.target as HTMLElement;
-            if (currentEditable !== elt) {
+            if (currentEditable !== elt && !this.checkLocked(elt)) {
 
                 startHtml = elt.innerHTML
                 currentEditable = elt;
@@ -361,7 +366,7 @@ export class Workspace implements Space {
             //Single selection. If previous action was multiselection, then reset.
             if (
                 !["body", "html"].includes(elt.tagName.toLowerCase()) &&
-                !ctrlDown
+                !ctrlDown 
             ) {
                 if (!this.selected.includes(elt) && this.selected.length <= 1) {
                     this.selected.splice(0, this.selected.length);
@@ -543,7 +548,7 @@ export class Workspace implements Space {
         this.root.contentDocument!.addEventListener("dragstart", (e: MouseEvent) => {
             iframe.focus()
             const elt = e.target as HTMLElement;
-            if (elt.getAttribute("odin-locked") !== "true" && !(shiftDown || ctrlDown)) {
+            if (elt.getAttribute("odin-locked") !== "true" && !(shiftDown || ctrlDown) && !editing) {
                 dragging = true;
                 currentDraggable = elt
                 this.toggleDropZone(currentDraggable, false, false)
@@ -1361,16 +1366,25 @@ export class Workspace implements Space {
         }
     }
 
-    checkLock(elt: HTMLElement) {
+    setLock(elt: HTMLElement) {
         if (!elt.hasAttribute("odin-locked"))
             elt.setAttribute("odin-locked", "false")
+    }
+    checkLocked(elt: HTMLElement): boolean {
+        if (elt.hasAttribute('odin-locked'))
+            if (elt.getAttribute('odin-locked') == 'true')
+                return true;
+            else
+                return false
+        else
+            return false
     }
 
     toggleLock(elt: HTMLElement, single: boolean, setTrue?: boolean) {
 
         //toggle locked single
         if (single && setTrue == undefined) {
-            this.checkLock(elt)
+            this.setLock(elt)
             if (elt.getAttribute("odin-locked") == "true")
                 elt.setAttribute("odin-locked", "false")
             else
@@ -1380,7 +1394,7 @@ export class Workspace implements Space {
         } //toggle locked children
         else if (!single && setTrue == undefined) {
             elt.querySelectorAll("*").forEach((elt) => {
-                this.checkLock(elt as HTMLElement)
+                this.setLock(elt as HTMLElement)
                 if (elt.getAttribute("odin-locked") == "true")
                     elt.setAttribute("odin-locked", "false")
                 else
@@ -1388,7 +1402,7 @@ export class Workspace implements Space {
 
             })
             //element itself
-            this.checkLock(elt )
+            this.setLock(elt )
                 if (elt.getAttribute("odin-locked") == "true")
                     elt.setAttribute("odin-locked", "false")
                 else
@@ -1398,7 +1412,7 @@ export class Workspace implements Space {
         }
         //turn on locked for one element
         else if (single && setTrue) {
-            this.checkLock(elt)
+            this.setLock(elt)
             if (elt.getAttribute("odin-locked") !== "true") {
                 elt.setAttribute("odin-locked", "true")
             }
@@ -1406,7 +1420,7 @@ export class Workspace implements Space {
         }
         //turn off locked for one element
         else if (single && !setTrue) {
-            this.checkLock(elt)
+            this.setLock(elt)
             if (elt.getAttribute("odin-locked") == "true") {
                 elt.setAttribute("odin-locked", "false")
             }
@@ -1414,13 +1428,13 @@ export class Workspace implements Space {
             //turn on locked for element and children
         } else if (!single && setTrue) {
             elt.querySelectorAll("*").forEach((elt) => {
-                this.checkLock(elt as HTMLElement)
+                this.setLock(elt as HTMLElement)
                 if (elt.getAttribute("odin-locked") !== "true") {
                     elt.setAttribute("odin-locked", "true")
                 }
             })
             //element itself
-            this.checkLock(elt)
+            this.setLock(elt)
             if (elt.getAttribute("odin-locked") !== "true") {
                 elt.setAttribute("odin-locked", "true")
             }
@@ -1428,13 +1442,13 @@ export class Workspace implements Space {
         } else if (!single && !setTrue) {
 
             elt.querySelectorAll("*").forEach((elt) => {
-                this.checkLock(elt as HTMLElement)
+                this.setLock(elt as HTMLElement)
                 if (elt.getAttribute("odin-locked") == "true") {
                     elt.setAttribute("odin-locked", "false")
                 }
             })
             //element itself
-            this.checkLock(elt)
+            this.setLock(elt)
             if (elt.getAttribute("odin-locked") == "true") {
                 elt.setAttribute("odin-locked", "false")
             }

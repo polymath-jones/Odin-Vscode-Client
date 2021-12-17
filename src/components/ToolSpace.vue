@@ -25,18 +25,19 @@
             >
               <img :src="icons['panel']" alt="Toggle panel visibility" />
             </toggle-button>
-            <tool-button
+            <!-- <tool-button
               :imageSource="icons['expand']"
               :outlined="true"
               :toogleable="false"
               placeholder="Full View"
             >
-            </tool-button>
+            </tool-button> -->
           </div>
           <toggle-button-stack
             :pilled="true"
             :buttons="buttonstest"
-            :default="1"
+            :default="0"
+            @stateChanged="handleResponsive"
           ></toggle-button-stack>
           <div class="right-tools">
             <div class="history-buttons">
@@ -76,7 +77,7 @@
         :class="{
           collapsedLeft: leftPaneClosed,
           collapsedRight: rightPaneClosed,
-          collapsedAll: leftPaneClosed && rightPaneClosed
+          collapsedAll: leftPaneClosed && rightPaneClosed,
         }"
       >
         <window-resizer>
@@ -103,11 +104,14 @@
 
         <!-- styler component -->
       </div>
+      <div class="panel-containers">
+        <layout-section></layout-section>
+      </div>
     </section>
     <panel
       class="left-pane-panel"
       @panelClosed="handlePanelClose"
-      :closed="false"
+      :closed="true"
       heading="Add Object"
       animation="opacity"
       glassed="true"
@@ -153,8 +157,10 @@ import ToggleButtonStack from "./ToggleButtonStack.vue";
 import WindowResizer from "./WindowResizer.vue";
 import Panel from "./Panel.vue";
 import EditableSelect from "./EditableSelect.vue";
+import LayoutSection from "./LayoutSection.vue";
 import InputDial from "./InputDial.vue";
 import Scrollbar from "smooth-scrollbar";
+import store from "@/store";
 
 @Options({
   props: {},
@@ -168,6 +174,7 @@ import Scrollbar from "smooth-scrollbar";
     Panel,
     WindowResizer,
     EditableSelect,
+    LayoutSection,
   },
 })
 export default class HelloWorld extends Vue {
@@ -225,6 +232,11 @@ export default class HelloWorld extends Vue {
   historyButtons: any;
   rightPaneButtons: any;
   leftPaneButtons: any;
+
+  get maxWidth(): any {
+    const max = store.state.viewData.windowConstriants.max;
+    return max;
+  }
 
   beforeMount() {
     StateService.init("");
@@ -323,6 +335,40 @@ export default class HelloWorld extends Vue {
       iconSource: this.icons["settings"],
     });
   }
+  handleResponsive(index: number) {
+    switch (this.buttonstest[index].id) {
+      case "mobile": {
+        store.commit("setWindowConstraints", {
+          min: 320,
+          max: 425,
+        });
+        break;
+      }
+      case "desktop": {
+        store.commit("setWindowConstraints", {
+          min: 768,
+          max: 1024,
+        });
+        break;
+      }
+
+      case "tablet": {
+        store.commit("setWindowConstraints", {
+          min: 425,
+          max: 768,
+        });
+        break;
+      }
+
+      case "landscape": {
+        store.commit("setWindowConstraints", {
+          min: 425,
+          max: 825,
+        });
+        break;
+      }
+    }
+  }
   handlePanelClose() {
     if (!this.panelClosed) this.panelClosed = true;
   }
@@ -356,6 +402,11 @@ export default class HelloWorld extends Vue {
     this.gs = Guidespace.getInstance();
     this.ts = Toolspace.getInstance();
     this.historyService = HistoryService.getInstance();
+
+    this.$watch("maxWidth", (_: number, __: number) => {
+     // Toolspace.getInstance().updateUIState();
+       Workspace.getInstance().resetSelected()
+    });
   }
 }
 </script>
@@ -411,16 +462,14 @@ export default class HelloWorld extends Vue {
   z-index: 99;
   border-radius: 10px;
 }
-.collapsedLeft{
-    max-width: calc(100vw - 260px);
-
+.collapsedLeft {
+  max-width: calc(100vw - 260px);
 }
-.collapsedRight{
-    max-width: calc(100vw - 54px);
+.collapsedRight {
+  max-width: calc(100vw - 54px);
 }
-.collapsedAll{
-    max-width: 100vw;
-
+.collapsedAll {
+  max-width: 100vw;
 }
 iframe {
   border-radius: 10px;
@@ -428,7 +477,7 @@ iframe {
 .left-tools,
 .right-tools {
   display: flex;
-  max-width: 500px;
+  min-width: 220px;
 }
 .left-pane-panel {
   position: absolute;

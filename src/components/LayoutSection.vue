@@ -17,6 +17,10 @@ export default class LayoutSection extends Vue {}
 </script>
 
 <style scoped>
+
+*{
+  font-family: Gilroy;
+}
 .align{
   padding:  20px 0;
   text-align: left;

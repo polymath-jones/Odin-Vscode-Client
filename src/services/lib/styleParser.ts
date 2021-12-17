@@ -1,3 +1,5 @@
+import store from "@/store";
+
 /**
  * create(-, ns , - ) create new rule with selectors
  * create(-, ns , ndcs) create new rule with selectors and
@@ -27,6 +29,8 @@ export class StyleParser {
     constructor(src: string) {
         try {
             this.styleSheet = this.parser.parse(src);
+
+            console.log(this.get(false, '.go', 'color', 'screen and (max-width: 425px)'))
         }
         catch (e) {
             console.log(e);
@@ -39,7 +43,9 @@ export class StyleParser {
         trimmed.sort()
         return trimmed.join(",")
     }
-    update(ruleSelectors: string, declaration: string, newValue: string) {
+
+
+    update(ruleSelectors: string, declaration: string, newValue: string, mediaPrelude?: string) {
 
         const sortedSelList = this.formatSelector(ruleSelectors);
         const decMap = this.cache[sortedSelList]
@@ -47,35 +53,73 @@ export class StyleParser {
         if (decMap)
             cached = declaration in decMap
 
-        if (!cached) {
-            this.styleSheet.getRules().forEach((rule: any) => {
-                var sels = rule.getSelectors()
-                var decs = rule.getDeclarations()
-                var sortedSels = this.formatSelector(sels.toString())
-                var eq = sortedSelList == sortedSels
-                if (eq) {
-                    decs.forEach((dec: any) => {
+        if (!mediaPrelude) {
+            if (!cached) {
 
-                        if (dec.getNameAsString() == declaration) {
+                this.styleSheet.getRules().forEach((rule: any) => {
 
-                            dec.setValue(newValue);
-                            const decMap = this.cache[sortedSelList]
-                            if (!decMap) this.cache[sortedSelList] = { [declaration]: dec }
-                            else decMap[declaration] = dec;
+                    if ((rule instanceof this.AST.Rule)) {
 
+                        var sels = rule.getSelectors()
+                        var decs = rule.getDeclarations()
+                        var sortedSels = this.formatSelector(sels.toString())
+                        var eq = sortedSelList == sortedSels
+                        if (eq) {
+                            decs.forEach((dec: any) => {
+
+                                if (dec.getNameAsString() == declaration) {
+
+                                    dec.setValue(newValue);
+                                    const decMap = this.cache[sortedSelList]
+                                    if (!decMap) this.cache[sortedSelList] = { [declaration]: dec }
+                                    else decMap[declaration] = dec;
+
+                                }
+                            })
                         }
-                    })
+
+                    }
+                });
+
+            }
+            else {
+                this.cache[sortedSelList][declaration].setValue(newValue)
+            }
+        } else {
+            //media queries update
+            this.styleSheet.getRules().forEach((rule: any) => {
+
+                if ((rule instanceof this.AST.AtMedia)) {
+
+                    if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
+                        rule.getRules().forEach((rule: any) => {
+
+                            if ((rule instanceof this.AST.Rule)) {
+
+                                var sels = rule.getSelectors()
+                                var decs = rule.getDeclarations()
+                                var sortedSels = this.formatSelector(sels.toString())
+                                var eq = sortedSelList == sortedSels
+                                if (eq) {
+                                    decs.forEach((dec: any) => {
+
+                                        if (dec.getNameAsString() == declaration) {
+                                            dec.setValue(newValue);
+                                        }
+                                    })
+                                }
+
+                            }
+                        });
+                    }
+
                 }
-
-            });
-
-        }
-        else {
-            this.cache[sortedSelList][declaration].setValue(newValue)
+            })
         }
 
     }
-    get(objectType: boolean, ruleSelectors?: string, declaration?: string): Array<object> | object | string | undefined {
+    get(objectType: boolean, ruleSelectors?: string, declaration?: string, mediaPrelude?: string): Array<object> | object | string | undefined {
+
 
         if (ruleSelectors) {
             const sortedSelList = this.formatSelector(ruleSelectors);
@@ -83,87 +127,215 @@ export class StyleParser {
 
             //get declaration
             if (declaration) {
-               
-                    let value: string | undefined | object = undefined
 
+                let value: string | undefined | object = undefined
+
+                if (!mediaPrelude) {
                     this.styleSheet.getRules().forEach((rule: any) => {
-                        var sels = rule.getSelectors()
-                        var decs = rule.getDeclarations()
-                        var sortedSels = this.formatSelector(sels.toString())
-                        var eq = sortedSelList == sortedSels
-                        if (eq && decs) {
 
-                            decs.forEach((dec: any) => {
+                        if ((rule instanceof this.AST.Rule)) {
 
-                                if (dec.getNameAsString() == declaration) {
+                            var sels = rule.getSelectors()
+                            var decs = rule.getDeclarations()
+                            var sortedSels = this.formatSelector(sels.toString())
+                            var eq = sortedSelList == sortedSels
+                            if (eq && decs) {
 
-                                    const decMap = this.cache[sortedSelList]
-                                    if (!decMap) this.cache[sortedSelList] = { [declaration]: dec }
-                                    else decMap[declaration] = dec;
+                                decs.forEach((dec: any) => {
+
+                                    if (dec.getNameAsString() == declaration) {
+
+                                        const decMap = this.cache[sortedSelList]
+                                        if (!decMap) this.cache[sortedSelList] = { [declaration]: dec }
+                                        else decMap[declaration] = dec;
 
 
-                                    value = objectType ? dec : dec.getValue().getText() as string
+                                        value = objectType ? dec : dec.getValue().getText() as string
 
-                                }
-                            })
+                                    }
+                                })
+                            }
+
                         }
+
                     });
                     return value
-                
+                }
+                else {
+
+                    this.styleSheet.getRules().forEach((rule: any) => {
+
+                        if ((rule instanceof this.AST.AtMedia)) {
+                            if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
+
+                                rule.getRules().forEach((rule: any) => {
+
+                                    var sels = rule.getSelectors()
+                                    var decs = rule.getDeclarations()
+                                    var sortedSels = this.formatSelector(sels.toString())
+                                    var eq = sortedSelList == sortedSels
+                                    if (eq && decs) {
+
+                                        decs.forEach((dec: any) => {
+
+                                            if (dec.getNameAsString() == declaration) {
+                                                value = objectType ? dec : dec.getValue().getText() as string
+
+                                            }
+                                        })
+                                    }
+                                })
+
+
+                            }
+
+                        }
+
+                    });
+                    return value
+                }
+
+
             }
             //get rule
             else {
-                if (decMap) {
-                    return sortedSelList
-                }
+
                 let value: object | undefined = undefined
-                this.styleSheet.getRules().forEach((rule: any) => {
-                    var sels = rule.getSelectors()
-                    var sortedSels = this.formatSelector(sels.toString())
-                    var eq = sortedSelList == sortedSels
-                    if (eq) {
-                        value = rule
+
+                if (!mediaPrelude) {
+                    if (decMap) {
+                        return sortedSelList
                     }
-                });
-                return value
+
+                    this.styleSheet.getRules().forEach((rule: any) => {
+
+                        if ((rule instanceof this.AST.Rule)) {
+                            var sels = rule.getSelectors()
+                            var sortedSels = this.formatSelector(sels.toString())
+                            var eq = sortedSelList == sortedSels
+                            if (eq) {
+                                value = rule
+                            }
+                        }
+
+                    });
+                    return value
+                } else {
+                    this.styleSheet.getRules().forEach((rule: any) => {
+
+                        if ((rule instanceof this.AST.AtMedia)) {
+                            if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
+
+                                rule.getRules().forEach((rule: any) => {
+                                    if ((rule instanceof this.AST.Rule)) {
+                                        var sels = rule.getSelectors()
+                                        var sortedSels = this.formatSelector(sels.toString())
+                                        var eq = sortedSelList == sortedSels
+                                        if (eq) {
+                                            value = rule
+                                        }
+                                    }
+                                })
+                                return value
+                            }
+                        }
+
+                    })
+                }
+
             }
         }
         //get all rules
         else {
             var rules = new Array<string>()
-            this.styleSheet.getRules().forEach((rule: any) => {
-                var sels = rule.getSelectors()
-                var sortedSels = this.formatSelector(sels.toString())
-                rules.push(sortedSels)
-            })
+
+            if (!mediaPrelude) {
+                this.styleSheet.getRules().forEach((rule: any) => {
+
+                    if ((rule instanceof this.AST.Rule)) {
+                        var sels = rule.getSelectors()
+                        var sortedSels = this.formatSelector(sels.toString())
+                        rules.push(sortedSels)
+                    }
+
+                })
+            }
+            else {
+                this.styleSheet.getRules().forEach((rule: any) => {
+
+                    if ((rule instanceof this.AST.AtMedia)) {
+                        if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
+
+                            rule.getRules().forEach((rule: any) => {
+                                if ((rule instanceof this.AST.Rule)) {
+                                    var sels = rule.getSelectors()
+                                    var sortedSels = this.formatSelector(sels.toString())
+                                    rules.push(sortedSels)
+                                }
+                            })
+                        }
+                    }
+                });
+            }
+
 
             return rules
         }
 
 
     }
-    create(ruleSelectors?: string, newSelectors?: string, declarations?: string) {
+    create(ruleSelectors?: string, newSelectors?: string, declarations?: string, mediaPrelude?: string) {
 
         //new rule: needs new selector. declaration optional
         if (newSelectors && !ruleSelectors) {
-            //no declarations
-            if (!declarations) {
-                this.styleSheet.insertRule(
-                    new this.AST.Rule(
-                        this.parser.parseSelectors(newSelectors),
-                        this.parser.parseDeclarations(`{}`)
+
+            if (!mediaPrelude) {
+                //no declarations
+                if (!declarations) {
+                    this.styleSheet.insertRule(
+                        new this.AST.Rule(
+                            this.parser.parseSelectors(newSelectors),
+                            this.parser.parseDeclarations(`{}`)
+                        )
                     )
-                )
-            }
-            //both declarations and selectors
-            else {
-                this.styleSheet.insertRule(
-                    new this.AST.Rule(
-                        this.parser.parseSelectors(newSelectors),
-                        this.parser.parseDeclarations(declarations)
+                }
+                //both declarations and selectors
+                else {
+                    this.styleSheet.insertRule(
+                        new this.AST.Rule(
+                            this.parser.parseSelectors(newSelectors),
+                            this.parser.parseDeclarations(declarations)
+                        )
                     )
-                )
+                }
+            } else {
+                this.styleSheet.getRules().forEach((rule: any) => {
+
+                    if ((rule instanceof this.AST.AtMedia)) {
+                        if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
+                            //no declarations
+                            if (!declarations) {
+                                rule.getRules().insertRule(
+                                    new this.AST.Rule(
+                                        this.parser.parseSelectors(newSelectors),
+                                        this.parser.parseDeclarations(`{}`)
+                                    )
+                                )
+                            }
+                            //both declarations and selectors
+                            else {
+                                rule.getRules().insertRule(
+                                    new this.AST.Rule(
+                                        this.parser.parseSelectors(newSelectors),
+                                        this.parser.parseDeclarations(declarations)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                })
             }
+
         }
         //new selector or declaration or both
         else if (ruleSelectors && (newSelectors || declarations)) {
@@ -172,19 +344,48 @@ export class StyleParser {
             if (!declarations) {
 
                 const sortedSelList = this.formatSelector(ruleSelectors)
-                this.styleSheet.getRules().forEach((rule: any) => {
 
-                    var sels = rule.getSelectors()
-                    var sortedSels = this.formatSelector(sels.toString())
-                    var eq = sortedSelList == sortedSels
-                    if (eq) {
-                        this.parser.parseSelectors(newSelectors).forEach((sel: any) => {
-                            sels.insertSelector(sel, 0)
-                        });
+                if (!mediaPrelude) {
+                    this.styleSheet.getRules().forEach((rule: any) => {
 
-                    }
+                        if ((rule instanceof this.AST.Rule)) {
+                            var sels = rule.getSelectors()
+                            var sortedSels = this.formatSelector(sels.toString())
+                            var eq = sortedSelList == sortedSels
+                            if (eq) {
+                                this.parser.parseSelectors(newSelectors).forEach((sel: any) => {
+                                    sels.insertSelector(sel, 0)
+                                });
 
-                });
+                            }
+                        }
+
+
+
+                    });
+                } else {
+                    this.styleSheet.getRules().forEach((rule: any) => {
+
+                        if ((rule instanceof this.AST.AtMedia)) {
+                            if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
+                                rule.getRules().forEach((rule: any) => {
+                                    if ((rule instanceof this.AST.Rule)) {
+                                        var sels = rule.getSelectors()
+                                        var sortedSels = this.formatSelector(sels.toString())
+                                        var eq = sortedSelList == sortedSels
+                                        if (eq) {
+                                            this.parser.parseSelectors(newSelectors).forEach((sel: any) => {
+                                                sels.insertSelector(sel, 0)
+                                            });
+
+                                        }
+                                    }
+                                })
+                            }
+                        }
+                    })
+                }
+
             }
 
             else {
@@ -192,43 +393,106 @@ export class StyleParser {
                 if (!newSelectors) {
 
                     const sortedSelList = this.formatSelector(ruleSelectors)
-                    this.styleSheet.getRules().forEach((rule: any) => {
 
-                        var sels = rule.getSelectors()
-                        var sortedSels = this.formatSelector(sels.toString())
-                        var eq = sortedSelList == sortedSels
-                        if (eq) {
-                            this.parser.parseDeclarations(declarations).forEach((dec: any) => {
+                    if (!mediaPrelude) {
+                        this.styleSheet.getRules().forEach((rule: any) => {
 
-                                if (this.get(false, ruleSelectors, dec.getNameAsString()) == undefined) {
-                                    rule.insertDeclaration(dec, 0)
+                            if ((rule instanceof this.AST.Rule)) {
+                                var sels = rule.getSelectors()
+                                var sortedSels = this.formatSelector(sels.toString())
+                                var eq = sortedSelList == sortedSels
+                                if (eq) {
+                                    this.parser.parseDeclarations(declarations).forEach((dec: any) => {
+
+                                        if (this.get(false, ruleSelectors, dec.getNameAsString()) == undefined) {
+                                            rule.insertDeclaration(dec, 0)
+                                        }
+
+                                    });
                                 }
+                            }
 
-                            });
-                        }
 
-                    });
+
+                        });
+                    } else {
+                        this.styleSheet.getRules().forEach((rule: any) => {
+
+                            if ((rule instanceof this.AST.AtMedia)) {
+                                if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
+                                    rule.getRules().forEach((rule: any) => {
+                                        if ((rule instanceof this.AST.Rule)) {
+                                            var sels = rule.getSelectors()
+                                            var sortedSels = this.formatSelector(sels.toString())
+                                            var eq = sortedSelList == sortedSels
+                                            if (eq) {
+                                                this.parser.parseDeclarations(declarations).forEach((dec: any) => {
+
+                                                    if (this.get(false, ruleSelectors, dec.getNameAsString()) == undefined) {
+                                                        rule.insertDeclaration(dec, 0)
+                                                    }
+
+                                                });
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                    }
+
                 }
 
                 else {
                     // new selectors and declarations
                     const sortedSelList = this.formatSelector(ruleSelectors)
-                    this.styleSheet.getRules().forEach((rule: any) => {
 
-                        var sels = rule.getSelectors()
-                        var decs = rule.getDeclarations()
-                        var sortedSels = this.formatSelector(sels.toString())
-                        var eq = sortedSelList == sortedSels
-                        if (eq) {
-                            this.parser.parseSelectors(newSelectors).forEach((sel: any) => {
-                                sels.insertSelector(sel, 0)
-                            });
-                            this.parser.parseDeclarations(declarations).forEach((dec: any) => {
-                                decs.insertDeclaration(dec)
-                            });
-                        }
+                    if (!mediaPrelude) {
+                        this.styleSheet.getRules().forEach((rule: any) => {
 
-                    });
+                            if ((rule instanceof this.AST.Rule)) {
+                                var sels = rule.getSelectors()
+                                var decs = rule.getDeclarations()
+                                var sortedSels = this.formatSelector(sels.toString())
+                                var eq = sortedSelList == sortedSels
+                                if (eq) {
+                                    this.parser.parseSelectors(newSelectors).forEach((sel: any) => {
+                                        sels.insertSelector(sel, 0)
+                                    });
+                                    this.parser.parseDeclarations(declarations).forEach((dec: any) => {
+                                        decs.insertDeclaration(dec)
+                                    });
+                                }
+                            }
+
+
+                        });
+                    } else {
+                        this.styleSheet.getRules().forEach((rule: any) => {
+
+                            if ((rule instanceof this.AST.AtMedia)) {
+                                if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
+                                    rule.getRules().forEach((rule: any) => {
+                                        if ((rule instanceof this.AST.Rule)) {
+                                            var sels = rule.getSelectors()
+                                            var decs = rule.getDeclarations()
+                                            var sortedSels = this.formatSelector(sels.toString())
+                                            var eq = sortedSelList == sortedSels
+                                            if (eq) {
+                                                this.parser.parseSelectors(newSelectors).forEach((sel: any) => {
+                                                    sels.insertSelector(sel, 0)
+                                                });
+                                                this.parser.parseDeclarations(declarations).forEach((dec: any) => {
+                                                    decs.insertDeclaration(dec)
+                                                });
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                    }
+
                 }
             }
         }
@@ -237,31 +501,70 @@ export class StyleParser {
 
 
     }
-    delete(ruleSelectors?: string, oldSelector?: string, declaration?: string): string | void {
+    delete(ruleSelectors?: string, oldSelector?: string, declaration?: string, mediaPrelude?: string): string | void {
+
+
         if (ruleSelectors && !oldSelector && !declaration) {
-            //delete rule
-            const sortedSelList = this.formatSelector(ruleSelectors)
-            const decMap = this.cache[sortedSelList]
 
-            if (decMap) {
-                delete this.cache[sortedSelList]
-            }
+            if (!mediaPrelude) {
+                //delete rule
+                const sortedSelList = this.formatSelector(ruleSelectors)
+                const decMap = this.cache[sortedSelList]
 
-            const rules = this.styleSheet.getChildren()[0].getChildren()
-
-            for (var j = 0; j < rules.length; j++) {
-                var rule = rules[j];
-                var sels = rule.getSelectors()
-                var sortedSels = this.formatSelector(sels.toString())
-                var eq = sortedSelList == sortedSels
-                if (eq) {
-                    this.styleSheet.deleteRule(j);
+                if (decMap) {
+                    delete this.cache[sortedSelList]
                 }
 
+                const rules = this.styleSheet.getChildren()[0].getChildren()
+
+                for (var j = 0; j < rules.length; j++) {
+                    var rule = rules[j];
+                    if ((rule instanceof this.AST.Rule)) {
+                        var sels = rule.getSelectors()
+                        var sortedSels = this.formatSelector(sels.toString())
+                        var eq = sortedSelList == sortedSels
+                        if (eq) {
+                            this.styleSheet.deleteRule(j);
+                        }
+                    }
+
+
+                }
+            } else {
+
+                //delete rule
+                const sortedSelList = this.formatSelector(ruleSelectors)
+                this.styleSheet.getRules().forEach((rule: any) => {
+
+                    if ((rule instanceof this.AST.AtMedia)) {
+                        if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
+                            for (let rules of rule.getChildren()) {
+                                if (rules instanceof this.AST.RuleList) {
+
+                                    for (var j = 0; j < rules.length; j++) {
+                                        var rule = rules[j];
+                                        if ((rule instanceof this.AST.Rule)) {
+                                            var sels = rule.getSelectors()
+                                            var sortedSels = this.formatSelector(sels.toString())
+                                            var eq = sortedSelList == sortedSels
+                                            if (eq) {
+                                                rules.deleteRule(j);
+                                            }
+                                        }
+
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+                })
             }
+
 
 
         }
+        //todo
         else if (ruleSelectors && oldSelector) {
 
             //delete selectors
@@ -272,58 +575,94 @@ export class StyleParser {
             for (var i = 0; i < rules.length; i++) {
 
                 var rule = rules[i];
-                var sels = rule.getSelectors()
-                var sortedSels = this.formatSelector(sels.toString())
-                var eq = sortedSelList == sortedSels
-                var children = sels.getChildren()
-                if (children.length == 0)
-                    break;
+                if ((rule instanceof this.AST.Rule)) {
+                    var sels = rule.getSelectors()
+                    var sortedSels = this.formatSelector(sels.toString())
+                    var eq = sortedSelList == sortedSels
+                    var children = sels.getChildren()
+                    if (children.length == 0)
+                        break;
 
 
-                if (eq) {
+                    if (eq) {
 
-                    for (var j = 0; j < children.length; j++) {
-                        var selector = children[j].toString().replace(/[,]+/g, '').trim()
+                        for (var j = 0; j < children.length; j++) {
+                            var selector = children[j].toString().replace(/[,]+/g, '').trim()
 
-                        if (todelete == selector) {
-                            rule.deleteSelector(j);
-                            if (sels.getChildren().length == 0) {
-                                this.styleSheet.deleteRule(j);
-                            } else {
-                                return this.formatSelector(rule.getSelectors().toString())
+                            if (todelete == selector) {
+                                rule.deleteSelector(j);
+                                if (sels.getChildren().length == 0) {
+                                    this.styleSheet.deleteRule(j);
+                                } else {
+                                    return this.formatSelector(rule.getSelectors().toString())
+                                }
+
                             }
-
                         }
-                    }
 
+                    }
                 }
+
             }
         }
         else if (ruleSelectors && declaration && !oldSelector) {
 
-            //delete declaration
-            const sortedSelList = this.formatSelector(ruleSelectors)
-            const rules = this.styleSheet.getChildren()[0].getChildren()
+            if (!mediaPrelude) {
+                //delete declaration
+                const sortedSelList = this.formatSelector(ruleSelectors)
+                const rules = this.styleSheet.getChildren()[0].getChildren()
 
-            for (var i = 0; i < rules.length; i++) {
+                for (var i = 0; i < rules.length; i++) {
 
-                var rule = rules[i];
-                var sels = rule.getSelectors()
-                var sortedSels = this.formatSelector(sels.toString())
-                var eq = sortedSelList == sortedSels
+                    var rule = rules[i];
+                    if ((rule instanceof this.AST.Rule)) {
+                        var sels = rule.getSelectors()
+                        var sortedSels = this.formatSelector(sels.toString())
+                        var eq = sortedSelList == sortedSels
 
-                if (eq) {
+                        if (eq) {
 
-                    var decs = rule.getDeclarations()
-                    
-                    for (var j = 0; j < decs._nodes.length; j++) {
-                        var dec = decs[j];
-                        if (dec.getNameAsString() == declaration) {
-                            rule.deleteDeclaration(j);    
+                            var decs = rule.getDeclarations()
+
+                            for (var j = 0; j < decs._nodes.length; j++) {
+                                var dec = decs[j];
+                                if (dec.getNameAsString() == declaration) {
+                                    rule.deleteDeclaration(j);
+                                }
+                            }
                         }
                     }
+
                 }
+            } else {
+                const sortedSelList = this.formatSelector(ruleSelectors)
+                this.styleSheet.getRules().forEach((rule: any) => {
+
+                    if ((rule instanceof this.AST.AtMedia)) {
+                        if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
+                            rule.getRules().forEach((rule: any) => {
+
+                                var sels = rule.getSelectors()
+                                var sortedSels = this.formatSelector(sels.toString())
+                                var eq = sortedSelList == sortedSels
+
+                                if (eq) {
+
+                                    var decs = rule.getDeclarations()
+
+                                    for (var j = 0; j < decs._nodes.length; j++) {
+                                        var dec = decs[j];
+                                        if (dec.getNameAsString() == declaration) {
+                                            rule.deleteDeclaration(j);
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                })
             }
+
         }
     }
     resetRuleDeclarations(ruleSelectors: string) {
@@ -334,29 +673,36 @@ export class StyleParser {
         for (var i = 0; i < rules.length; i++) {
 
             var rule = rules[i];
-            var sels = rule.getSelectors()
-            var sortedSels = this.formatSelector(sels.toString())
-            var eq = sortedSelList == sortedSels
+            if ((rule instanceof this.AST.Rule)) {
+                var sels = rule.getSelectors()
+                var sortedSels = this.formatSelector(sels.toString())
+                var eq = sortedSelList == sortedSels
 
-            if (eq) {
-                rule.deleteAllDeclarations()
+                if (eq) {
+                    rule.deleteAllDeclarations()
+                }
             }
+
         }
     }
     resetRuleSelectors(ruleSelectors: string, newSelectors: string) {
+
         const sortedSelList = this.formatSelector(ruleSelectors)
         const rules = this.styleSheet.getChildren()[0].getChildren()
 
         for (var i = 0; i < rules.length; i++) {
 
             var rule = rules[i];
-            var sels = rule.getSelectors()
-            var sortedSels = this.formatSelector(sels.toString())
-            var eq = sortedSelList == sortedSels
+            if ((rule instanceof this.AST.Rule)) {
+                var sels = rule.getSelectors()
+                var sortedSels = this.formatSelector(sels.toString())
+                var eq = sortedSelList == sortedSels
 
-            if (eq) {
-                rule.setSelectors(this.parser.parseSelectors(newSelectors))
+                if (eq) {
+                    rule.setSelectors(this.parser.parseSelectors(newSelectors))
+                }
             }
+
         }
     }
     print(): string | void {
