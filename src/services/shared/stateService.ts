@@ -38,6 +38,9 @@ export class StateService {
     }
     deconstruct(src: string) {
         this.styleParser = new StyleParser(`
+
+        
+
         html, body {
             border: 0px;
             margin: 0px;
@@ -63,10 +66,6 @@ export class StateService {
             background-color: #313133;
         }
 
-       
-        
-
-        
 
         @media screen and (max-width: 1200px) {
           

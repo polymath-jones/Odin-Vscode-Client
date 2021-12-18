@@ -16,6 +16,8 @@ import store from "@/store";
  * get(-,-) get all rules in stylesheet
  * 
  * update(rs,dc,nv) update declaration with new value
+ * 
+ * !important:: HACKY CODE
  */
 export class StyleParser {
 
@@ -30,11 +32,21 @@ export class StyleParser {
         try {
             this.styleSheet = this.parser.parse(src);
 
-            console.log(this.get(false, '.go', 'color', 'screen and (max-width: 425px)'))
+            console.log(this.getRuleInsertPos());
+
+
         }
         catch (e) {
             console.log(e);
         }
+    }
+    getRuleInsertPos(): number | undefined {
+        const rules = this.styleSheet.getRules().getChildren()
+        for (let i = 0; i < rules.length; i++) {
+            if (rules[i] instanceof this.AST.AtMedia)
+                return i
+        }
+        return undefined
     }
     formatSelector(src: string): string {
         var source = src.trim();
@@ -286,7 +298,7 @@ export class StyleParser {
     }
     create(ruleSelectors?: string, newSelectors?: string, declarations?: string, mediaPrelude?: string) {
 
-        //new rule: needs new selector. declaration optional
+        //new rule: requires a new selector. declaration optional
         if (newSelectors && !ruleSelectors) {
 
             if (!mediaPrelude) {
@@ -296,7 +308,8 @@ export class StyleParser {
                         new this.AST.Rule(
                             this.parser.parseSelectors(newSelectors),
                             this.parser.parseDeclarations(`{}`)
-                        )
+                        ), this.getRuleInsertPos()
+
                     )
                 }
                 //both declarations and selectors
@@ -305,21 +318,24 @@ export class StyleParser {
                         new this.AST.Rule(
                             this.parser.parseSelectors(newSelectors),
                             this.parser.parseDeclarations(declarations)
-                        )
+                        ), this.getRuleInsertPos()
+
                     )
                 }
             } else {
                 this.styleSheet.getRules().forEach((rule: any) => {
 
                     if ((rule instanceof this.AST.AtMedia)) {
+
                         if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
                             //no declarations
                             if (!declarations) {
                                 rule.getRules().insertRule(
                                     new this.AST.Rule(
                                         this.parser.parseSelectors(newSelectors),
-                                        this.parser.parseDeclarations(`{}`)
+                                        this.parser.parseDeclarations(`{}`),
                                     )
+
                                 )
                             }
                             //both declarations and selectors
@@ -418,17 +434,22 @@ export class StyleParser {
                     } else {
                         this.styleSheet.getRules().forEach((rule: any) => {
 
+
                             if ((rule instanceof this.AST.AtMedia)) {
                                 if (rule.getPrelude().toString().trim() == mediaPrelude.trim()) {
                                     rule.getRules().forEach((rule: any) => {
+
                                         if ((rule instanceof this.AST.Rule)) {
+
+
                                             var sels = rule.getSelectors()
                                             var sortedSels = this.formatSelector(sels.toString())
                                             var eq = sortedSelList == sortedSels
                                             if (eq) {
+
                                                 this.parser.parseDeclarations(declarations).forEach((dec: any) => {
 
-                                                    if (this.get(false, ruleSelectors, dec.getNameAsString()) == undefined) {
+                                                    if (this.get(false, ruleSelectors, dec.getNameAsString(), mediaPrelude) == undefined) {
                                                         rule.insertDeclaration(dec, 0)
                                                     }
 

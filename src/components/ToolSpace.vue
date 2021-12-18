@@ -233,11 +233,6 @@ export default class HelloWorld extends Vue {
   rightPaneButtons: any;
   leftPaneButtons: any;
 
-  get maxWidth(): any {
-    const max = store.state.viewData.windowConstriants.max;
-    return max;
-  }
-
   beforeMount() {
     StateService.init("");
     this.stateService = StateService.getInstance();
@@ -402,11 +397,6 @@ export default class HelloWorld extends Vue {
     this.gs = Guidespace.getInstance();
     this.ts = Toolspace.getInstance();
     this.historyService = HistoryService.getInstance();
-
-    this.$watch("maxWidth", (_: number, __: number) => {
-     // Toolspace.getInstance().updateUIState();
-       Workspace.getInstance().resetSelected()
-    });
   }
 }
 </script>

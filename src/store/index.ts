@@ -1,3 +1,4 @@
+import { Toolspace } from '@/services/toolspace';
 import { createStore } from 'vuex'
 
 export default createStore({
@@ -12,7 +13,7 @@ export default createStore({
       "float": undefined
     },
     viewData: {
-      panelsVisiblity:{
+      panelsVisiblity: {
         left: true,
         right: true,
         hideAll: false
@@ -35,6 +36,8 @@ export default createStore({
     },
     setWindowConstraints(state, payload) {
       state.viewData.windowConstriants = payload
+      if (Toolspace.isInstantiated())
+        Toolspace.getInstance().updateUIState(true)
     },
     setContainerSize(state, payload) {
       state.viewData.windowContainerSize = payload

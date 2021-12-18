@@ -15,7 +15,7 @@ export namespace StyleEditors {
         let priority = params.precedence ? " !important" : ""
         if (!mediaPrelude) {
             if (params.value) styleParser.update(params.rule, params.declaration, `${params.value}${priority}`);
-        } else {
+        } else {            
             if (params.value) styleParser.update(params.rule, params.declaration, `${params.value}${priority}`,mediaPrelude);
         }
 
@@ -30,7 +30,9 @@ export namespace StyleEditors {
             styleParser.create(params.rule, undefined, `{${params.declaration}:${params.value}${priority};}`)
         }
         else{
+            
             styleParser.create(params.rule, undefined, `{${params.declaration}:${params.value}${priority};}`,mediaPrelude)
+            
         }
 
         if (styleSheet) styleSheet.innerHTML = styleParser.print() ? (styleParser.print() as string) : "";
