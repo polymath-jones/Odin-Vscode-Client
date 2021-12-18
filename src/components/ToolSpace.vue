@@ -33,12 +33,20 @@
             >
             </tool-button> -->
           </div>
-          <toggle-button-stack
+
+          <!-- Responsive buttons  -->
+          <!-- <toggle-button-stack
             :pilled="true"
             :buttons="buttonstest"
             :default="0"
             @stateChanged="handleResponsive"
-          ></toggle-button-stack>
+          ></toggle-button-stack> -->
+
+          <button-stack
+            v-model:buttons="screenButtons"
+            @changeScreen="handleResponsive"
+          ></button-stack>
+
           <div class="right-tools">
             <div class="history-buttons">
               <tool-button
@@ -106,12 +114,19 @@
       </div>
       <div class="panel-containers">
         <layout-section></layout-section>
+        <editable-select
+          :mini="false"
+          :editable="true"
+          :items="selectTest"
+        ></editable-select>
+
+        <input-dial @valueChanged="handleDialTest"></input-dial>
       </div>
     </section>
     <panel
       class="left-pane-panel"
       @panelClosed="handlePanelClose"
-      :closed="true"
+      :closed="panelClosed"
       heading="Add Object"
       animation="opacity"
       glassed="true"
@@ -120,13 +135,6 @@
       :glassed="true"
       fill="#3E3D40D6"
     >
-      <editable-select
-        :mini="false"
-        :editable="true"
-        :items="selectTest"
-      ></editable-select>
-
-      <input-dial></input-dial>
     </panel>
   </div>
 </template>
@@ -154,6 +162,7 @@ import DynamicTab from "./DynamicTab.vue";
 import ToggleButton from "./ToggleButton.vue";
 import ToolButton from "./ToolButton.vue";
 import ToggleButtonStack from "./ToggleButtonStack.vue";
+import ButtonStack from "./ButtonStack.vue";
 import WindowResizer from "./WindowResizer.vue";
 import Panel from "./Panel.vue";
 import EditableSelect from "./EditableSelect.vue";
@@ -175,6 +184,7 @@ import store from "@/store";
     WindowResizer,
     EditableSelect,
     LayoutSection,
+    ButtonStack,
   },
 })
 export default class HelloWorld extends Vue {
@@ -232,7 +242,12 @@ export default class HelloWorld extends Vue {
   historyButtons: any;
   rightPaneButtons: any;
   leftPaneButtons: any;
+  screenButtons = [{ id: "", source: "", state: false }];
 
+  get maxWidth(): any {
+    const max = store.state.viewData.windowConstriants.max;
+    return max;
+  }
   beforeMount() {
     StateService.init("");
     this.stateService = StateService.getInstance();
@@ -329,6 +344,52 @@ export default class HelloWorld extends Vue {
       text: "Item 3",
       iconSource: this.icons["settings"],
     });
+
+    this.screenButtons = [
+      {
+        id: "wide",
+        source: this.icons["wide"],
+        state: true,
+      },
+      {
+        id: "desktop",
+        source: this.icons["desktop"],
+        state: false,
+      },
+      {
+        id: "tablet",
+        source: this.icons["tablet"],
+        state: false,
+      },
+      {
+        id: "landscape",
+        source: this.icons["landscape"],
+        state: false,
+      },
+      {
+        id: "mobile",
+        source: this.icons["mobile"],
+        state: false,
+      },
+    ];
+    this.$watch("maxWidth", (value: number, old: number) => {
+      if (value <= 425) this.changeScreeButtonState(4);
+      else if (value <= 768) this.changeScreeButtonState(2);
+      else if (value <= 825) this.changeScreeButtonState(3);
+      else if (value <= 1200) this.changeScreeButtonState(1);
+      else this.changeScreeButtonState(0);
+    });
+  }
+  changeScreeButtonState(index: number) {
+    for (let i = 0; i < this.screenButtons.length; i++) {
+      if (i == index) {
+        if (!this.screenButtons[index].state) {
+          this.screenButtons[index].state = true;
+        }
+      } else {
+        this.screenButtons[i].state = false;
+      }
+    }
   }
   handleResponsive(index: number) {
     switch (this.buttonstest[index].id) {
@@ -380,6 +441,19 @@ export default class HelloWorld extends Vue {
         break;
       }
     }
+  }
+
+  handleDialTest(data: { value: number; unit: string }) {
+    Toolspace.getInstance().updateStyle({
+      declartion: "position",
+      value: "relative",
+      precedence: false,
+    });
+    Toolspace.getInstance().updateStyle({
+      declartion: "top",
+      value: data.value + data.unit,
+      precedence: false,
+    });
   }
   loaded() {
     Scrollbar.initAll();

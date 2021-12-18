@@ -111,7 +111,6 @@ export default class WindowResizer extends Vue {
         });
 
         store.commit("setContainerSize", width);
-
         if (this.currentWidth > width) this.currentWidth = width;
       }
     );

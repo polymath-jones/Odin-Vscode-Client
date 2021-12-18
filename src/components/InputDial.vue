@@ -31,7 +31,7 @@ export default class InputDial extends Vue {
   style = "";
   startX = 0;
   startY = 0;
-  weight = 40;
+  weight = 20;
   val = 0;
   revs = 1;
   currentUnit = "px";
@@ -70,7 +70,8 @@ export default class InputDial extends Vue {
       if (this.mouseDown) {
         this.mouseDown = false;
         this.angle = this.angle % 360;
-        this.weight = 50;
+        this.revs = 1
+        this.weight = 20;
         //console.log();
       }
     });
