@@ -106,7 +106,7 @@ export default class WindowResizer extends Vue {
       (entries: Array<ResizeObserverEntry>) => {
         const width = entries[0].contentRect.width;
         store.commit("setWindowConstraints", {
-          min: 425,
+          min: 1200,
           max: width,
         });
 

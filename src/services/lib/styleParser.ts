@@ -25,7 +25,6 @@ export class StyleParser {
     private parser = require("boreas/lib/parser");
     private AST = require("boreas/lib/ast");
     private PrettyPrinter = require('boreas/lib/pretty-printer');
-    // private cache: { [key: string]: { [key: string]: any } } = {}
     private styleSheet: any;
 
     constructor(src: string) {
@@ -697,7 +696,8 @@ export class StyleParser {
         }
     }
     print(): string | void {
-        //   console.log(this.PrettyPrinter.beautify(this.styleSheet));
-        return this.PrettyPrinter.beautify(this.styleSheet);
+        let src = this.PrettyPrinter.beautify(this.styleSheet);
+        store.commit('setStyleSource',src)
+        return src
     }
 }

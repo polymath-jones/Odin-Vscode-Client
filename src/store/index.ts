@@ -12,6 +12,7 @@ export default createStore({
       "flex-wrap": undefined,
       "float": undefined
     },
+    currentStyleSource: "",
     viewData: {
       panelsVisiblity: {
         left: true,
@@ -52,6 +53,9 @@ export default createStore({
     setWindowScale(state, payload) {
       state.viewData.windowScale = payload
     },
+    setStyleSource(state, payload) {
+      state.currentStyleSource = payload
+    }
   },
   actions: {
   },

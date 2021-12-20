@@ -98,23 +98,38 @@
         ></button-stack>
       </div>
       <div class="panel-containers">
-        <odin-styler> </odin-styler>
+        <odin-styler @openCS="handleCustomStyler"> </odin-styler>
       </div>
     </section>
 
-    <section class="panels-container">
+    <section class="panels-wrapper">
       <panel
-        class="left-pane-panel"
+        class="right-pane-panel"
         @panelClosed="handlePanelClose"
-        :closed="true"
-        heading="Add Object"
+        v-model:closed="customStylerClosed"
+        heading="Customize Style"
         animation="opacity"
         glassed="true"
-        :width="400"
-        :height="700"
-        :glassed="true"
+        :width="500"
+        :height="360"
         fill="#3E3D40D6"
       >
+        <prism-editor
+          class="my-editor custom-scroll"
+          :modelValue="currentStyleSource"
+          @input="handleInputChange"
+          :highlight="highlighter"
+          line-numbers
+        ></prism-editor>
+        <tool-button
+          class="style-editor-button"
+          :imageSource="icons['save']"
+          placeholder="Save"
+          :outlined="true"
+          :toogleable="false"
+          @clicked="handleStyleSave"
+        >
+        </tool-button>
       </panel>
       <panel
         class="left-pane-panel"
@@ -159,8 +174,8 @@ import { StateService } from "../services/shared/stateService";
 import { HistoryService } from "../services/shared/historyService";
 import { Guidespace } from "../services/guidespace";
 import { Toolspace } from "../services/toolspace";
-import { ToolStates } from "../services/shared/toolStates";
 
+import { ToolStates } from "../services/shared/toolStates";
 import ToggleButton from "./ToggleButton.vue";
 import OdinStyler from "./OdinStyler.vue";
 import ToolButton from "./ToolButton.vue";
@@ -168,6 +183,8 @@ import ButtonStack from "./ButtonStack.vue";
 import WindowResizer from "./WindowResizer.vue";
 import Panel from "./Panel.vue";
 import store from "@/store";
+
+import "prismjs/themes/prism-tomorrow.css";
 
 @Options({
   props: {},
@@ -181,12 +198,14 @@ import store from "@/store";
   },
 })
 export default class HelloWorld extends Vue {
+  prism = require("prismjs");
   styleSheet!: HTMLStyleElement;
   root!: HTMLIFrameElement;
 
   panelClosed = false;
   leftPaneClosed = false;
   rightPaneClosed = false;
+  customStylerClosed = true;
 
   stateService!: StateService;
   historyService!: HistoryService;
@@ -202,10 +221,15 @@ export default class HelloWorld extends Vue {
   leftPaneButtons = [{ id: "", source: "", state: false, placeholder: "" }];
   rightPaneButtons = [{ id: "", source: "", state: false, placeholder: "" }];
   historyButtons = [{ id: "", source: "", placeholder: "" }];
+  currentStyleSource = "";
 
   get maxWidth(): any {
     return store.state.viewData.windowConstriants.max;
   }
+  get code(): string {
+    return store.state.currentStyleSource;
+  }
+
   beforeMount() {
     StateService.init("");
     this.stateService = StateService.getInstance();
@@ -219,26 +243,26 @@ export default class HelloWorld extends Vue {
     this.leftPaneButtons = this.toolStates.leftPaneButtons;
     this.screenButtons = this.toolStates.screenButtons;
     this.selectTest = this.toolStates.selectEntries;
-
-    this.$watch("maxWidth", (value: number, old: number) => {
-      if (value <= 425) this.changeScreeButtonState(4);
-      else if (value <= 768) this.changeScreeButtonState(2);
-      else if (value <= 825) this.changeScreeButtonState(3);
-      else if (value <= 1200) this.changeScreeButtonState(1);
-      else this.changeScreeButtonState(0);
-    });
   }
   mounted() {
+    console.log(this.prism);
+
     document.ondragstart = (e: Event) => {
       e.stopPropagation();
       e.preventDefault();
     };
+  }
+  handleCustomStyler() {
+    this.customStylerClosed = false;
   }
   handleSave() {
     const sr = this.historyService.serializeStack(true);
     const storage = window.localStorage;
 
     storage.setItem("history", sr);
+  }
+  handleInputChange(code: any) {
+    this.currentStyleSource = code.target.value as string;
   }
   handleHistory(state: boolean) {
     if (state) this.historyService.undo();
@@ -317,6 +341,9 @@ export default class HelloWorld extends Vue {
       precedence: false,
     });
   }
+  highlighter(code: any) {
+    return this.prism.highlight(code, this.prism.languages.css, "css");
+  }
   loaded() {
     this.root = this.$refs.workspace as HTMLIFrameElement;
     this.styleSheet = this.root.contentDocument!.createElement("style");
@@ -337,20 +364,50 @@ export default class HelloWorld extends Vue {
     const sr = storage.getItem("history");
 
     if (sr) {
-      
-      //console.log(sr);
-      let states  = HistoryService.deserializeToStack(sr, true)
-      for(let state of states ){
-        this.historyService.push(state );  
+      let states = HistoryService.deserializeToStack(sr, true);
+      for (let state of states) {
+        this.historyService.push(state);
       }
-      
     }
     storage.clear();
+    this.initWatchers();
   }
+  initWatchers() {
+    this.$watch("maxWidth", (value: number, old: number) => {
+      if (value <= 425) this.changeScreeButtonState(4);
+      else if (value <= 768) this.changeScreeButtonState(2);
+      else if (value <= 825) this.changeScreeButtonState(3);
+      else if (value <= 1200) this.changeScreeButtonState(1);
+      else this.changeScreeButtonState(0);
+    });
+    this.$watch("code", (value: string, old: string) => {
+      this.currentStyleSource = value;
+    });
+  }
+  handleStyleSave() {}
 }
 </script>
 
 <style scoped>
+.my-editor {
+  border-radius: 20px;
+  background: #2d2d2d;
+  color: #ccc;
+  font-family: Fira code, Fira Mono, Consolas, Menlo, Courier, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 5px;
+  height: 200px;
+}
+
+.style-editor-button {
+  margin-top: 16px;
+  float: right;
+}
+
+.prism-editor__textarea:focus {
+  outline: none;
+}
 .marginAuto {
   margin: auto;
 }
@@ -422,6 +479,12 @@ iframe {
   position: absolute;
   top: 44px;
   left: 56px;
+  z-index: 99;
+}
+.right-pane-panel {
+  position: absolute;
+  top: 44px;
+  left: calc(100vw - 844px);
   z-index: 99;
 }
 

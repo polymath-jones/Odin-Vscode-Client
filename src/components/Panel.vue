@@ -64,6 +64,7 @@ export default class Panel extends Vue {
   }
 
   handleClick() {
+    this.$emit("update:closed", true)
     this.$emit("panelClosed", {});
   }
   beforeMount() {

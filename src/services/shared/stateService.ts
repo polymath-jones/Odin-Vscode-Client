@@ -20,7 +20,6 @@ export class StateService {
     private xmlParser!: xmlDom.DOMParser;
     private scriptParser!: ScriptParser;
 
-
     private constructor(componentSource: string) {
         this.deconstruct(componentSource);
 

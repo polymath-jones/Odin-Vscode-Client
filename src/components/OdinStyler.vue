@@ -12,6 +12,7 @@
       fill="#6FCF97"
       textFill="#3E3D40"
       placeholder="Cutomize Style"
+      @clicked="$emit('openCS')"
     ></tool-button>
     <hr />
 
