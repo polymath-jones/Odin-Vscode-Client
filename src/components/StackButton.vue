@@ -92,7 +92,7 @@ export default class StackButton extends Vue {
   width: fit-content;
   display: flex;
   align-items: center;
-  padding: 8px 16px;
+  padding: 4px 16px;
 }
 .reducePadding {
   padding: 8px 8px;

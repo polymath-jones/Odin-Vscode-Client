@@ -30,15 +30,14 @@ export class Workspace implements Space {
 
         this.root = iframe;
         this.historyService = HistoryService.getInstance()
+        
         this.toggleAll(iframe.contentDocument!.body)
         this.registerHooks();
-        //Disable context menu
+
         iframe.contentDocument?.body.setAttribute('oncontextmenu', 'return false');
         iframe.contentWindow?.focus();
-        //iframe.contentDocument!.designMode = "on"
 
         //this.testXmlDom();
-
     }
     testXmlDom() {
         var template =
@@ -227,7 +226,7 @@ export class Workspace implements Space {
     }
 
 
-    getRoot(): HTMLElement {
+    getRoot(): HTMLIFrameElement {
         return this.root;
     }
 
@@ -254,6 +253,7 @@ export class Workspace implements Space {
         var ctrlDown = false
         var lkeyDown = false;
         var pkeyDown = false;
+        var xkeyDown = false;
         var dkeyDown = false;
         var mouseDown = false;
         var editing = false;
@@ -305,7 +305,7 @@ export class Workspace implements Space {
         //Observe the body's size
         this.resizeObserver.observe(iframe.contentDocument?.querySelector('body')!)
 
-        // this.scaleWorkspace(1500)
+        //this.scaleWorkspace(2000)
         //Redraw guidespace on scroll
         iframe.contentWindow!.onscroll = (e) => {
             gs.clear()
@@ -454,7 +454,7 @@ export class Workspace implements Space {
 
                             if (!["body", "html"].includes(elt.tagName.toLowerCase()) &&
                                 !Toolspace.getInstance().checkLocked(elt)) {
-                                    
+
                                 const rect = elt.getBoundingClientRect();
                                 var x = start[0];
                                 var y = start[1];
@@ -909,6 +909,16 @@ export class Workspace implements Space {
                 }
 
             }
+            else if (!xkeyDown && e.key === "x") {
+                if (altDown) {
+                    e.preventDefault()
+                    xkeyDown = true
+                    Toolspace.getInstance().removeAppClass()
+                    gs.clear()
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                }
+            }
+
             else if (!pkeyDown && e.key === "p") {
 
 
@@ -965,6 +975,9 @@ export class Workspace implements Space {
             }
             else if (dkeyDown && e.key === "d") {
                 dkeyDown = false;
+            }
+            else if (xkeyDown && e.key === "x") {
+                xkeyDown = false;
             }
         });
 

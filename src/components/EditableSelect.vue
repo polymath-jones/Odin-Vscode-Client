@@ -228,7 +228,7 @@ export default class EditableSelect extends Vue {
 .select-container {
   font-family: "Gilroy";
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
 }
 .select-bar {
   display: flex;
@@ -258,7 +258,7 @@ export default class EditableSelect extends Vue {
 
 .select-content {
   overflow: hidden;
-  height: 300px;
+  height: 160px;
   background-color: #2e2d2d;
   animation: reveal 0.15s ease-in-out 1 forwards;
   border-radius: 0px 0px 4px 4px;

@@ -59,7 +59,7 @@ export default class OdinDrawer extends Vue {
 .drawer-container {
   font-family: "Gilroy";
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
 }
 .drawer-bar {
   display: flex;
@@ -87,6 +87,7 @@ export default class OdinDrawer extends Vue {
   padding: 12px;
 }
 .drawer-placeholder {
+  font-size: 13px;
   color: #ffffff;
   margin: 0px;
 }

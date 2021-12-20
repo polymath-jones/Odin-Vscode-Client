@@ -80,7 +80,7 @@ export default class ToolButton extends Vue {
   width: fit-content;
   height: fit-content;
   display: flex;
-  padding: 8px 16px;
+  padding: 6px 16px;
 }
 .images-wrapper {
   height: fit-content;

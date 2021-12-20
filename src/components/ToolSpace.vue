@@ -53,6 +53,7 @@
               placeholder="Save"
               :outlined="true"
               :toogleable="false"
+              @clicked="handleSave"
             >
             </tool-button>
             <toggle-button
@@ -146,7 +147,6 @@
 </template>
 
 <script lang="ts">
-
 /**
  * On element click:: get in-app classes and add to selected array
  * Update the UI vuex state with selected-class style
@@ -220,12 +220,12 @@ export default class HelloWorld extends Vue {
     this.screenButtons = this.toolStates.screenButtons;
     this.selectTest = this.toolStates.selectEntries;
 
-    this.$watch("maxWidth", (value: number, old: number) => {      
+    this.$watch("maxWidth", (value: number, old: number) => {
       if (value <= 425) this.changeScreeButtonState(4);
       else if (value <= 768) this.changeScreeButtonState(2);
       else if (value <= 825) this.changeScreeButtonState(3);
       else if (value <= 1200) this.changeScreeButtonState(1);
-      else this.changeScreeButtonState(0);      
+      else this.changeScreeButtonState(0);
     });
   }
   mounted() {
@@ -233,12 +233,17 @@ export default class HelloWorld extends Vue {
       e.stopPropagation();
       e.preventDefault();
     };
-    
+  }
+  handleSave() {
+    const sr = this.historyService.serializeStack(true);
+    const storage = window.localStorage;
+
+    storage.setItem("history", sr);
   }
   handleHistory(state: boolean) {
     if (state) this.historyService.undo();
     else this.historyService.redo();
-    this.gs.clear()
+    this.gs.clear();
   }
   changeScreeButtonState(index: number) {
     this.toggleButtonStates(this.screenButtons, index);
@@ -327,6 +332,20 @@ export default class HelloWorld extends Vue {
     this.gs = Guidespace.getInstance();
     this.ts = Toolspace.getInstance();
     this.historyService = HistoryService.getInstance();
+
+    const storage = window.localStorage;
+    const sr = storage.getItem("history");
+
+    if (sr) {
+      
+      //console.log(sr);
+      let states  = HistoryService.deserializeToStack(sr, true)
+      for(let state of states ){
+        this.historyService.push(state );  
+      }
+      
+    }
+    storage.clear();
   }
 }
 </script>

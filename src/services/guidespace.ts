@@ -199,8 +199,8 @@ export class Guidespace implements Space {
 
                 }
 
-                // this.drawPaddings(elt);
-                // this.drawMargins(elt)
+                this.drawPaddings(elt);
+                this.drawMargins(elt)
                 break;
             }
 

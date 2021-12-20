@@ -89,6 +89,27 @@ export class Toolspace implements Space {
         this.mediaSelectedClasses = mediaSelectedClasses
     }
 
+    removeAppClass() {
+
+        const currentElt = this.selected![0]
+        if (currentElt) {
+            const styleRules = this.stateService.getStyleParser().get(false, undefined, undefined) as Array<string>
+            const mediaStyleRules = this.stateService.getStyleParser().get(false, undefined, undefined, this.currentPrelude) as Array<string>
+
+            currentElt.classList.forEach(val => {
+
+                if (styleRules.includes(`.${val}`)) {
+                    currentElt.classList.remove(val)
+                }
+                if (mediaStyleRules.includes(`.${val}`)) {
+                    currentElt.classList.remove(val)
+                }
+
+            })
+        }
+
+    }
+
     setSelected(selected: Array<HTMLElement>) {
 
         this.checkIfMedia()
@@ -101,12 +122,6 @@ export class Toolspace implements Space {
         const mediaStyleRules = this.stateService.getStyleParser().get(false, undefined, undefined, this.currentPrelude) as Array<string>
         const selectedClasses = new Array<string>()
         const mediaSelectedClasses = new Array<string>()
-
-        /* 
-        todo:: 
-        add empty rule to default style if styling is reponsive directly. 
-        Check if current class selected class is in media selected classes. Create if it isn't else update
-         */
 
         if (currentElt)
             classList.push(...currentElt.classList)
@@ -241,6 +256,23 @@ export class Toolspace implements Space {
                     this.stateService.getStyleParser().create(undefined, `.${className}`);
                     this.selected.forEach((elt) => elt.classList.add(className));
                 }
+                else if (this.selectedClasses.length > 0 && this.selected.length > 1) {
+
+                    const rule = this.selectedClasses[this.selectedClasses.length - 1]
+                    let commonClass = true
+
+                    for (let i = 1; i < this.selected.length; i++) {
+                        commonClass = this.selected[i].classList.contains(rule) && commonClass
+                    }
+
+                    if (!commonClass) {
+                        const className = this.selected[0].tagName.toLowerCase() + "-" + this.generateID();
+                        this.selectedClasses.push(className);
+                        this.stateService.getStyleParser().create(undefined, `.${className}`);
+                        this.selected.forEach((elt) => elt.classList.add(className));
+                    }
+                }
+
             }
 
 
@@ -274,7 +306,6 @@ export class Toolspace implements Space {
                     this.stateService.getStyleParser(),
                     this.currentPrelude
                 );
-
 
                 if (this.timeOutIndex == undefined)
                     this.startValue = decValue as string

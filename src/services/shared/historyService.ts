@@ -27,6 +27,7 @@ import { PLACEMENT_MODE } from "../guidespace"
 import { StyleEditors } from './styleEditor';
 import { StateService } from './stateService';
 import { Toolspace } from '../toolspace';
+import { Workspace } from '../workspace';
 
 
 export enum OPERTATION_TYPE {
@@ -42,7 +43,6 @@ export type StyleOperands = {
     rule: any;
     oldValue: string;
     newValue: string;
-    selected: Array<HTMLElement>;
     stylesheet: HTMLStyleElement;
     mediaPrelude: string;
 }
@@ -95,9 +95,79 @@ export class HistoryService {
             this.redoStack.splice(0)
         }
         this.undoStack.push(state);
-        console.log(state);
-        
 
+    }
+    static deserializeToStack(serialized: string, undo: boolean) {
+
+        let states = JSON.parse(serialized) as Array<any>
+        let deserializedStates = new Array<State>()
+        for (let state of states) {
+
+
+            const deserializedState = JSON.parse(state)
+            const opType = deserializedState.operationType as OPERTATION_TYPE
+
+            switch (opType) {
+                case OPERTATION_TYPE.DOM: {
+                    const operands = deserializedState.operands
+                    Object.keys(operands).forEach(operand => {
+                        if (["element",
+                            "sibling",
+                            "previousSibling",
+                            "parent",
+                            "previousParent"].includes(operand)) {
+                                const odinID = operands[operand] as string
+                                const elt = Workspace.getInstance().getRoot().contentDocument?.querySelector(`[odin-id="${odinID.trim()}"]`)
+                                operands[operand] = elt
+                        }
+                    })
+                    break
+                }
+            }
+
+            deserializedStates.push(deserializedState as State)
+        }
+
+        return deserializedStates
+    }
+    serializeStack(undo: boolean): string {
+
+        let stack = undo ? this.undoStack : this.redoStack
+        let transformed = Array<string>()
+
+        for (let state of stack) {
+            switch (state.operationType) {
+                case OPERTATION_TYPE.DOM: {
+
+                    const ops = state.operands as DomOperands
+                    const element = ops.element?.getAttribute("odin-id")
+                    const sibling = ops.sibling?.getAttribute("odin-id")
+                    const previousSibling = ops.previousSibling?.getAttribute("odin-id")
+                    const parent = ops.parent?.getAttribute("odin-id")
+                    const previousParent = ops.previousParent?.getAttribute("odin-id")
+
+                    const operands = {
+                        element: element,
+                        sibling: sibling,
+                        previousSibling: previousSibling,
+                        parent: parent,
+                        previousParent: previousParent,
+                        text: ops.text,
+                        previousText: ops.previousText
+                    }
+                    const transformedState = {
+                        operands: operands,
+                        operationType: state.operationType,
+                        operationMode: state.operationMode
+                    }
+
+                    transformed.push(JSON.stringify(transformedState));
+                    break;
+                }
+            }
+        }
+
+        return JSON.stringify(transformed);
     }
     undo() {
 
@@ -160,7 +230,7 @@ export class HistoryService {
                             // console.log("undoing declaration");
 
                             console.log(val);
-                            
+
                             StyleEditors.updateDeclaration(
                                 { rule: sel, declaration: dec, value: val, precedence: false },
                                 ops.stylesheet,
@@ -250,7 +320,7 @@ export class HistoryService {
                             const sel = ops.selector as string
                             const dec = ops.declaration.getNameAsString()
                             const val = ops.newValue as string
-                            
+
                             StyleEditors.updateDeclaration(
                                 { rule: sel, declaration: dec, value: val, precedence: false },
                                 ops.stylesheet,
