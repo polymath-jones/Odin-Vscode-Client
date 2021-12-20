@@ -208,14 +208,14 @@ export default class EditableSelect extends Vue {
 
 <style scoped>
 .minimize {
-  width: 88px;
+  width: 80px;
   font-size: 12px !important;
 }
 .dialInput {
-  width: 50px;
+  width: 40px;
 }
 .minimize > .select-bar {
-  height: 32px;
+  height: 30px;
   padding: 4px 4px;
 }
 .minimize > .select-content {
@@ -294,6 +294,7 @@ export default class EditableSelect extends Vue {
   background-color: rgba(255, 255, 255, 0.068);
 }
 .item-editor {
+  width: 90%;
   background-color: transparent;
   color: white;
   border: solid 1.7px #38383b;

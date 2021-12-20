@@ -31,6 +31,8 @@ export class Toolspace implements Space {
     historyService: HistoryService;
     preludes = new Map<PRELUDES, string>()
     currentPrelude: string | undefined = undefined
+    timeOutIndex!: number | undefined
+    startValue = ""
 
     private constructor(iframe: HTMLIFrameElement, styleSheet: HTMLStyleElement) {
         this.root = iframe
@@ -273,9 +275,21 @@ export class Toolspace implements Space {
                     this.currentPrelude
                 );
 
-                let declaration = this.stateService.getStyleParser().get(true, params.rule, params.declaration, this.currentPrelude)
-                if (declaration && decValue)
-                    this.saveStyleDeclarationUpdateToHistory(declaration as object, decValue as string, params.value, params.rule, this.currentPrelude)
+
+                if (this.timeOutIndex == undefined)
+                    this.startValue = decValue as string
+
+                clearTimeout(this.timeOutIndex);
+
+                this.timeOutIndex = setTimeout(() => {
+
+                    let declaration = this.stateService.getStyleParser().get(true, params.rule, params.declaration, this.currentPrelude)
+                    if (declaration && this.startValue)
+                        this.saveStyleDeclarationUpdateToHistory(declaration as object, this.startValue, params.value, params.rule, this.currentPrelude)
+
+                    this.timeOutIndex = undefined
+                }, 200)
+
             }
             gs.clear()
             gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);

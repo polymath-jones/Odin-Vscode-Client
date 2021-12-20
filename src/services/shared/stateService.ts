@@ -51,7 +51,6 @@ export class StateService {
         }
         body::-webkit-scrollbar-track {
             -webkit-box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.123);
-            border-radius: 10px;
             background-color: #84828E;
         }
 
@@ -61,7 +60,6 @@ export class StateService {
         }
 
         body::-webkit-scrollbar-thumb {
-            border-radius: 10px;
             -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.205);
             background-color: #313133;
         }

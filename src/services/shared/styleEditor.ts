@@ -15,7 +15,7 @@ export namespace StyleEditors {
         let priority = params.precedence ? " !important" : ""
         if (!mediaPrelude) {
             if (params.value) styleParser.update(params.rule, params.declaration, `${params.value}${priority}`);
-        } else {            
+        } else {                            
             if (params.value) styleParser.update(params.rule, params.declaration, `${params.value}${priority}`,mediaPrelude);
         }
 

@@ -19,7 +19,10 @@ Buttons can be togglable, pressed.
     }"
     :style="`background-color: ${fill}`"
   >
-    <div class="wrapper" :class="{ compact: compact }">
+    <div
+      class="wrapper"
+      :class="{ compact: compact, reducePadding: !pressedState && compressed }"
+    >
       <img
         class="button-image"
         :class="{ pressed: pressedState }"
@@ -48,6 +51,7 @@ import { Options, Vue } from "vue-class-component";
     state: Boolean,
     id: String,
     compact: Boolean,
+    compressed: Boolean
   },
   components: {},
 })
@@ -65,7 +69,7 @@ export default class StackButton extends Vue {
       this.pressed = true;
     }
 
-   // this.$emit('update:state', this.pressed)
+    // this.$emit('update:state', this.pressed)
   }
   mounted() {}
 }
@@ -83,24 +87,26 @@ export default class StackButton extends Vue {
   border-radius: 4px;
   cursor: pointer;
 }
+
 .wrapper {
   width: fit-content;
   display: flex;
   align-items: center;
-  padding: 4px 16px;
+  padding: 8px 16px;
+}
+.reducePadding {
+  padding: 8px 8px;
 }
 .compact {
   padding: 4px 8px;
 }
 .images-wrapper {
-  height: 20px;
 }
 .none {
   display: none;
 }
 img {
   transition-duration: 0.1s;
-
   opacity: 0.5;
 }
 p {

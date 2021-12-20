@@ -22,8 +22,7 @@ buttons can be togglable, pressed
         :src="imageSource"
         alt=""
       />
-
-      <p v-if="placeholder">{{ placeholder }}</p>
+      <p v-if="placeholder" :style="`color: ${textFill}`">{{ placeholder }}</p>
     </div>
   </div>
 </template>
@@ -35,6 +34,7 @@ import { Options, Vue } from "vue-class-component";
     toogleable: Boolean,
     outlined: Boolean,
     fill: String,
+    textFill: String,
     highlighted: Boolean,
     placeholder: String,
     imageSource: String,
@@ -80,7 +80,7 @@ export default class ToolButton extends Vue {
   width: fit-content;
   height: fit-content;
   display: flex;
-  padding: 4px 16px;
+  padding: 8px 16px;
 }
 .images-wrapper {
   height: fit-content;

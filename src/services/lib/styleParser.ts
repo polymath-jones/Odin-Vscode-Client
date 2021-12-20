@@ -25,16 +25,12 @@ export class StyleParser {
     private parser = require("boreas/lib/parser");
     private AST = require("boreas/lib/ast");
     private PrettyPrinter = require('boreas/lib/pretty-printer');
-    private cache: { [key: string]: { [key: string]: any } } = {}
+    // private cache: { [key: string]: { [key: string]: any } } = {}
     private styleSheet: any;
 
     constructor(src: string) {
         try {
             this.styleSheet = this.parser.parse(src);
-
-            console.log(this.getRuleInsertPos());
-
-
         }
         catch (e) {
             console.log(e);
@@ -60,13 +56,8 @@ export class StyleParser {
     update(ruleSelectors: string, declaration: string, newValue: string, mediaPrelude?: string) {
 
         const sortedSelList = this.formatSelector(ruleSelectors);
-        const decMap = this.cache[sortedSelList]
-        var cached = false
-        if (decMap)
-            cached = declaration in decMap
-
         if (!mediaPrelude) {
-            if (!cached) {
+            
 
                 this.styleSheet.getRules().forEach((rule: any) => {
 
@@ -82,10 +73,6 @@ export class StyleParser {
                                 if (dec.getNameAsString() == declaration) {
 
                                     dec.setValue(newValue);
-                                    const decMap = this.cache[sortedSelList]
-                                    if (!decMap) this.cache[sortedSelList] = { [declaration]: dec }
-                                    else decMap[declaration] = dec;
-
                                 }
                             })
                         }
@@ -93,10 +80,7 @@ export class StyleParser {
                     }
                 });
 
-            }
-            else {
-                this.cache[sortedSelList][declaration].setValue(newValue)
-            }
+            
         } else {
             //media queries update
             this.styleSheet.getRules().forEach((rule: any) => {
@@ -135,8 +119,6 @@ export class StyleParser {
 
         if (ruleSelectors) {
             const sortedSelList = this.formatSelector(ruleSelectors);
-            const decMap = this.cache[sortedSelList]
-
             //get declaration
             if (declaration) {
 
@@ -156,12 +138,7 @@ export class StyleParser {
                                 decs.forEach((dec: any) => {
 
                                     if (dec.getNameAsString() == declaration) {
-
-                                        const decMap = this.cache[sortedSelList]
-                                        if (!decMap) this.cache[sortedSelList] = { [declaration]: dec }
-                                        else decMap[declaration] = dec;
-
-
+                                        
                                         value = objectType ? dec : dec.getValue().getText() as string
 
                                     }
@@ -215,10 +192,7 @@ export class StyleParser {
                 let value: object | undefined = undefined
 
                 if (!mediaPrelude) {
-                    if (decMap) {
-                        return sortedSelList
-                    }
-
+                    
                     this.styleSheet.getRules().forEach((rule: any) => {
 
                         if ((rule instanceof this.AST.Rule)) {
@@ -530,11 +504,7 @@ export class StyleParser {
             if (!mediaPrelude) {
                 //delete rule
                 const sortedSelList = this.formatSelector(ruleSelectors)
-                const decMap = this.cache[sortedSelList]
-
-                if (decMap) {
-                    delete this.cache[sortedSelList]
-                }
+                
 
                 const rules = this.styleSheet.getChildren()[0].getChildren()
 

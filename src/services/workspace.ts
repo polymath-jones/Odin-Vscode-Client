@@ -231,7 +231,7 @@ export class Workspace implements Space {
         return this.root;
     }
 
-    resetSelected(){
+    resetSelected() {
         this.selected.splice(0)
         Guidespace.getInstance().clear()
     }
@@ -297,7 +297,7 @@ export class Workspace implements Space {
         this.resizeObserver = new ResizeObserver((entries: any) => {
 
             const zoomRatio = this.getPixelRatio()
-           // console.log('window zoom level: ' + Math.round(zoomRatio * 100) + '%');
+            // console.log('window zoom level: ' + Math.round(zoomRatio * 100) + '%');
             gs.reset(false)
             gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
 
@@ -366,7 +366,7 @@ export class Workspace implements Space {
             //Single selection. If previous action was multiselection, then reset.
             if (
                 !["body", "html"].includes(elt.tagName.toLowerCase()) &&
-                !ctrlDown 
+                !ctrlDown
             ) {
                 if (!this.selected.includes(elt) && this.selected.length <= 1) {
                     this.selected.splice(0, this.selected.length);
@@ -452,7 +452,9 @@ export class Workspace implements Space {
                         this.walkTheDOM(this.root.contentDocument?.body as Node, (node) => {
                             const elt = node as HTMLElement;
 
-                            if (elt != this.getRoot()) {
+                            if (!["body", "html"].includes(elt.tagName.toLowerCase()) &&
+                                !Toolspace.getInstance().checkLocked(elt)) {
+                                    
                                 const rect = elt.getBoundingClientRect();
                                 var x = start[0];
                                 var y = start[1];
@@ -1402,11 +1404,11 @@ export class Workspace implements Space {
 
             })
             //element itself
-            this.setLock(elt )
-                if (elt.getAttribute("odin-locked") == "true")
-                    elt.setAttribute("odin-locked", "false")
-                else
-                    elt.setAttribute("odin-locked", "true")
+            this.setLock(elt)
+            if (elt.getAttribute("odin-locked") == "true")
+                elt.setAttribute("odin-locked", "false")
+            else
+                elt.setAttribute("odin-locked", "true")
 
 
         }

@@ -25,6 +25,7 @@ export default createStore({
       windowContainerSize: 0,
       appState: {
         disabled: false,
+        interactive: true,
         message: ""
       },
       windowScale: 1.0

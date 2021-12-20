@@ -8,12 +8,12 @@
     }"
   >
     <section class="pane background left-pane">
-      <toggle-button-stack
+      <button-stack
         class="marginAuto"
-        :buttons="leftPaneButtons"
+        v-model:buttons="leftPaneButtons"
         :vertical="true"
         :spread="true"
-      ></toggle-button-stack>
+      ></button-stack>
     </section>
     <section>
       <section class="pane background top-pane">
@@ -25,26 +25,10 @@
             >
               <img :src="icons['panel']" alt="Toggle panel visibility" />
             </toggle-button>
-            <!-- <tool-button
-              :imageSource="icons['expand']"
-              :outlined="true"
-              :toogleable="false"
-              placeholder="Full View"
-            >
-            </tool-button> -->
           </div>
-
-          <!-- Responsive buttons  -->
-          <!-- <toggle-button-stack
-            :pilled="true"
-            :buttons="buttonstest"
-            :default="0"
-            @stateChanged="handleResponsive"
-          ></toggle-button-stack> -->
-
           <button-stack
             v-model:buttons="screenButtons"
-            @changeScreen="handleResponsive"
+            @changed="handleResponsive"
           ></button-stack>
 
           <div class="right-tools">
@@ -53,12 +37,14 @@
                 :imageSource="icons['undo']"
                 :outlined="true"
                 :toogleable="false"
+                @clicked="handleHistory(true)"
               >
               </tool-button>
               <tool-button
                 :imageSource="icons['redo']"
                 :outlined="true"
                 :toogleable="false"
+                @clicked="handleHistory(false)"
               >
               </tool-button>
             </div>
@@ -101,54 +87,70 @@
     </section>
     <section class="pane background right-pane">
       <div class="right-pane-selectors">
-        <toggle-button-stack
+        <button-stack
           :styled="true"
           fill="#4D4C51"
           :pilled="true"
-          :buttons="rightPaneButtons"
+          v-model:buttons="rightPaneButtons"
           :default="0"
           :wide="true"
-        ></toggle-button-stack>
-
-        <!-- styler component -->
+        ></button-stack>
       </div>
       <div class="panel-containers">
-        <layout-section></layout-section>
-        <editable-select
-          :mini="false"
-          :editable="true"
-          :items="selectTest"
-        ></editable-select>
-
-        <input-dial @valueChanged="handleDialTest"></input-dial>
+        <odin-styler> </odin-styler>
       </div>
     </section>
-    <panel
-      class="left-pane-panel"
-      @panelClosed="handlePanelClose"
-      :closed="panelClosed"
-      heading="Add Object"
-      animation="opacity"
-      glassed="true"
-      :width="400"
-      :height="700"
-      :glassed="true"
-      fill="#3E3D40D6"
-    >
-    </panel>
+
+    <section class="panels-container">
+      <panel
+        class="left-pane-panel"
+        @panelClosed="handlePanelClose"
+        :closed="true"
+        heading="Add Object"
+        animation="opacity"
+        glassed="true"
+        :width="400"
+        :height="700"
+        :glassed="true"
+        fill="#3E3D40D6"
+      >
+      </panel>
+      <panel
+        class="left-pane-panel"
+        @panelClosed="handlePanelClose"
+        :closed="true"
+        heading="Assets"
+        animation="opacity"
+        glassed="true"
+        :width="400"
+        :height="700"
+        :glassed="true"
+        fill="#3E3D40D6"
+      >
+      </panel>
+      <panel
+        class="left-pane-panel"
+        @panelClosed="handlePanelClose"
+        :closed="true"
+        heading="Navigator"
+        animation="opacity"
+        glassed="true"
+        :width="400"
+        :height="700"
+        :glassed="true"
+        fill="#3E3D40D6"
+      >
+      </panel>
+    </section>
   </div>
 </template>
 
 <script lang="ts">
+
 /**
- *
  * On element click:: get in-app classes and add to selected array
  * Update the UI vuex state with selected-class style
  * On UI event:: handle event and edit style with toolspace service
- *
- *
- *
- *
  **/
 
 import { Options, Vue } from "vue-class-component";
@@ -157,59 +159,34 @@ import { StateService } from "../services/shared/stateService";
 import { HistoryService } from "../services/shared/historyService";
 import { Guidespace } from "../services/guidespace";
 import { Toolspace } from "../services/toolspace";
-import ColorPicker from "vue3-ts-picker";
-import DynamicTab from "./DynamicTab.vue";
+import { ToolStates } from "../services/shared/toolStates";
+
 import ToggleButton from "./ToggleButton.vue";
+import OdinStyler from "./OdinStyler.vue";
 import ToolButton from "./ToolButton.vue";
-import ToggleButtonStack from "./ToggleButtonStack.vue";
 import ButtonStack from "./ButtonStack.vue";
 import WindowResizer from "./WindowResizer.vue";
 import Panel from "./Panel.vue";
-import EditableSelect from "./EditableSelect.vue";
-import LayoutSection from "./LayoutSection.vue";
-import InputDial from "./InputDial.vue";
-import Scrollbar from "smooth-scrollbar";
 import store from "@/store";
 
 @Options({
   props: {},
   components: {
-    ColorPicker,
-    DynamicTab,
     ToggleButton,
     ToolButton,
-    ToggleButtonStack,
-    InputDial,
     Panel,
     WindowResizer,
-    EditableSelect,
-    LayoutSection,
     ButtonStack,
+    OdinStyler,
   },
 })
 export default class HelloWorld extends Vue {
   styleSheet!: HTMLStyleElement;
   root!: HTMLIFrameElement;
-  selected!: Array<HTMLElement>;
-  selectedClasses!: Array<string>;
-  currentEditable!: HTMLElement | undefined;
 
-  shiftDown = false;
-  altDown = false;
-  ctrlDown = false;
-  mouseDown = false;
-  editing = false;
-  wasDragging = false;
-  wasSelecting = false;
   panelClosed = false;
   leftPaneClosed = false;
   rightPaneClosed = false;
-
-  start = [0, 0];
-  offset = [0, 0];
-  top = 0;
-  color = "";
-  display = "";
 
   stateService!: StateService;
   historyService!: HistoryService;
@@ -217,182 +194,68 @@ export default class HelloWorld extends Vue {
   gs!: Guidespace;
   ts!: Toolspace;
 
-  icons: { [key: string]: string } = {
-    panel: "panel.svg",
-    rightPanel: "rightPanel.svg",
-    expand: "expand.svg",
-    add: "add.svg",
-    assets: "assets.svg",
-    navigation: "navigation.svg",
-    mobile: "mobile.svg",
-    desktop: "desktop.svg",
-    landscape: "landscape.svg",
-    wide: "wide.svg",
-    tablet: "tablet.svg",
-    undo: "undo.svg",
-    redo: "redo.svg",
-    save: "save.svg",
-    actions: "actions.svg",
-    style: "style.svg",
-    settings: "settings.svg",
-  };
+  toolStates!: ToolStates;
+  icons!: any;
 
   selectTest = new Map<string, { text: string; iconSource: string }>();
-  buttonstest: any;
-  historyButtons: any;
-  rightPaneButtons: any;
-  leftPaneButtons: any;
-  screenButtons = [{ id: "", source: "", state: false }];
+  screenButtons = [{ id: "", source: "", state: false, placeholder: "" }];
+  leftPaneButtons = [{ id: "", source: "", state: false, placeholder: "" }];
+  rightPaneButtons = [{ id: "", source: "", state: false, placeholder: "" }];
+  historyButtons = [{ id: "", source: "", placeholder: "" }];
 
   get maxWidth(): any {
-    const max = store.state.viewData.windowConstriants.max;
-    return max;
+    return store.state.viewData.windowConstriants.max;
   }
   beforeMount() {
     StateService.init("");
     this.stateService = StateService.getInstance();
 
-    for (let icon in this.icons) {
-      const filename = this.icons[icon];
-      const path = require(`../assets/icons/${filename}`);
-      this.icons[icon] = path;
-    }
+    ToolStates.init();
+    this.toolStates = ToolStates.getInstance();
 
-    this.buttonstest = [
-      {
-        id: "wide",
-        source: this.icons["wide"],
-        /* placeholder: "mobile size", */
-      },
-      {
-        id: "desktop",
-        source: this.icons["desktop"],
-        /*  placeholder: "desktop size", */
-      },
-      {
-        id: "tablet",
-        source: this.icons["tablet"],
-        /* placeholder: "mobile size", */
-      },
-      {
-        id: "landscape",
-        source: this.icons["landscape"],
-        /* placeholder: "mobile size", */
-      },
-      {
-        id: "mobile",
-        source: this.icons["mobile"],
-        /* placeholder: "mobile size", */
-      },
-    ];
+    this.icons = this.toolStates.icons;
+    this.historyButtons = this.toolStates.historyButtons;
+    this.rightPaneButtons = this.toolStates.rightPaneButtons;
+    this.leftPaneButtons = this.toolStates.leftPaneButtons;
+    this.screenButtons = this.toolStates.screenButtons;
+    this.selectTest = this.toolStates.selectEntries;
 
-    this.historyButtons = [
-      {
-        id: "undo",
-        source: this.icons["undo"],
-        /* placeholder: "mobile size", */
-      },
-      {
-        id: "redo",
-        source: this.icons["redo"],
-        /*  placeholder: "desktop size", */
-      },
-    ];
-
-    this.rightPaneButtons = [
-      {
-        id: "style",
-        source: this.icons["style"],
-        placeholder: "Style",
-      },
-      {
-        id: "settings",
-        source: this.icons["settings"],
-        placeholder: "Settings",
-      },
-      {
-        id: "actions",
-        source: this.icons["actions"],
-        placeholder: "Actions",
-      },
-    ];
-
-    this.leftPaneButtons = [
-      {
-        id: "add",
-        source: this.icons["add"],
-      },
-      {
-        id: "navigation",
-        source: this.icons["navigation"],
-      },
-      {
-        id: "assets",
-        source: this.icons["assets"],
-      },
-    ];
-
-    this.selectTest.set("item1", {
-      text: "Item 1",
-      iconSource: this.icons["settings"],
-    });
-    this.selectTest.set("item2", {
-      text: "Item 2",
-      iconSource: this.icons["settings"],
-    });
-    this.selectTest.set("item3", {
-      text: "Item 3",
-      iconSource: this.icons["settings"],
-    });
-
-    this.screenButtons = [
-      {
-        id: "wide",
-        source: this.icons["wide"],
-        state: true,
-      },
-      {
-        id: "desktop",
-        source: this.icons["desktop"],
-        state: false,
-      },
-      {
-        id: "tablet",
-        source: this.icons["tablet"],
-        state: false,
-      },
-      {
-        id: "landscape",
-        source: this.icons["landscape"],
-        state: false,
-      },
-      {
-        id: "mobile",
-        source: this.icons["mobile"],
-        state: false,
-      },
-    ];
-    this.$watch("maxWidth", (value: number, old: number) => {
+    this.$watch("maxWidth", (value: number, old: number) => {      
       if (value <= 425) this.changeScreeButtonState(4);
       else if (value <= 768) this.changeScreeButtonState(2);
       else if (value <= 825) this.changeScreeButtonState(3);
       else if (value <= 1200) this.changeScreeButtonState(1);
-      else this.changeScreeButtonState(0);
+      else this.changeScreeButtonState(0);      
     });
   }
+  mounted() {
+    document.ondragstart = (e: Event) => {
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    
+  }
+  handleHistory(state: boolean) {
+    if (state) this.historyService.undo();
+    else this.historyService.redo();
+    this.gs.clear()
+  }
   changeScreeButtonState(index: number) {
-    for (let i = 0; i < this.screenButtons.length; i++) {
+    this.toggleButtonStates(this.screenButtons, index);
+  }
+  toggleButtonStates(states: Array<any>, index: number) {
+    for (let i = 0; i < states.length; i++) {
       if (i == index) {
-        if (!this.screenButtons[index].state) {
-          this.screenButtons[index].state = true;
+        if (!states[index].state) {
+          states[index].state = true;
         }
       } else {
-        this.screenButtons[i].state = false;
+        states[i].state = false;
       }
     }
   }
   handleResponsive(index: number) {
-    switch (this.buttonstest[index].id) {
+    switch (this.screenButtons[index].id) {
       case "mobile": {
         store.commit("setWindowConstraints", {
           min: 320,
@@ -442,21 +305,14 @@ export default class HelloWorld extends Vue {
       }
     }
   }
-
   handleDialTest(data: { value: number; unit: string }) {
     Toolspace.getInstance().updateStyle({
-      declartion: "position",
-      value: "relative",
-      precedence: false,
-    });
-    Toolspace.getInstance().updateStyle({
-      declartion: "top",
+      declartion: "padding",
       value: data.value + data.unit,
       precedence: false,
     });
   }
   loaded() {
-    Scrollbar.initAll();
     this.root = this.$refs.workspace as HTMLIFrameElement;
     this.styleSheet = this.root.contentDocument!.createElement("style");
     this.styleSheet.innerHTML = StateService.getInstance()
@@ -487,18 +343,18 @@ export default class HelloWorld extends Vue {
 }
 #workspace {
   border: none;
-  height: 100%;
+  height: auto;
   width: 100%;
 }
 .grid-container {
   position: relative;
   display: grid;
   height: 100vh;
-  grid-template-columns: 54px auto 260px;
+  grid-template-columns: 54px auto 320px;
   overflow: hidden;
 }
 .leftPaneClosed {
-  grid-template-columns: 0px auto 260px;
+  grid-template-columns: 0px auto 320px;
 }
 .rightPaneClosed {
   grid-template-columns: 54px auto 0px;
@@ -509,7 +365,7 @@ export default class HelloWorld extends Vue {
 }
 .left-pane,
 .right-pane {
-  padding: 40px 10px;
+  padding: 40px 10px 16px;
   height: 100%;
   overflow: hidden;
 }
@@ -521,13 +377,13 @@ export default class HelloWorld extends Vue {
   position: relative;
   display: flex;
   flex-flow: column;
-  height: 100%;
-  max-width: calc(100vw - 314px);
+  height: calc(100vh - 40px);
+  max-width: calc(100vw - 374px);
   z-index: 99;
   border-radius: 10px;
 }
 .collapsedLeft {
-  max-width: calc(100vw - 260px);
+  max-width: calc(100vw - 320px);
 }
 .collapsedRight {
   max-width: calc(100vw - 54px);
@@ -575,5 +431,13 @@ iframe {
 }
 .tool-wrapper > * {
   margin: 0 8px;
+}
+.right-pane {
+  display: flex;
+  flex-direction: column;
+}
+.panel-containers {
+  margin-top: 16px;
+  flex-grow: 1;
 }
 </style>

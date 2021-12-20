@@ -95,6 +95,9 @@ export class HistoryService {
             this.redoStack.splice(0)
         }
         this.undoStack.push(state);
+        console.log(state);
+        
+
     }
     undo() {
 
@@ -156,6 +159,8 @@ export class HistoryService {
 
                             // console.log("undoing declaration");
 
+                            console.log(val);
+                            
                             StyleEditors.updateDeclaration(
                                 { rule: sel, declaration: dec, value: val, precedence: false },
                                 ops.stylesheet,
@@ -185,6 +190,8 @@ export class HistoryService {
 
 
             this.redoStack.push(state);
+            console.log(this.undoStack, this.redoStack);
+
         }
     }
     redo() {
@@ -243,6 +250,7 @@ export class HistoryService {
                             const sel = ops.selector as string
                             const dec = ops.declaration.getNameAsString()
                             const val = ops.newValue as string
+                            
                             StyleEditors.updateDeclaration(
                                 { rule: sel, declaration: dec, value: val, precedence: false },
                                 ops.stylesheet,

@@ -1,8 +1,12 @@
 <template>
   <div class="dial-container">
-    <div ref="base" class="dial-base">
+    <div ref="base" @dblclick="handleDoubleClick" class="dial-base">
       <div class="dial-bar" :style="style">
-        <div @mousedown="handleMouseDown" :class="{ circleHover: mouseDown }" class="circle"></div>
+        <div
+          @mousedown="handleMouseDown"
+          :class="{ circleHover: mouseDown }"
+          class="circle"
+        ></div>
       </div>
     </div>
     <editable-select
@@ -35,6 +39,7 @@ export default class InputDial extends Vue {
   val = 0;
   revs = 1;
   currentUnit = "px";
+  startTime = 0;
 
   mounted() {
     this.$watch("val", (val: number, old: number) => {
@@ -42,7 +47,8 @@ export default class InputDial extends Vue {
         this.angle = (360 * val) / this.weight;
         this.style = `transform: rotate(${this.angle}deg);`;
       }
-      this.$emit("valueChanged", { value: val, unit: this.currentUnit });
+     // if (this.canEmit(200))
+        this.$emit("valueChanged", { value: Math.floor(val), unit: this.currentUnit });
     });
     document.addEventListener("mousemove", (e) => {
       if (this.mouseDown) {
@@ -70,14 +76,27 @@ export default class InputDial extends Vue {
       if (this.mouseDown) {
         this.mouseDown = false;
         this.angle = this.angle % 360;
-        this.revs = 1
+        this.revs = 1;
         this.weight = 20;
         //console.log();
       }
     });
   }
+  handleDoubleClick(){
+    this.val = 0
+  }
   handleUnitChange(data: { unit: string }) {
     this.currentUnit = data.unit;
+  }
+  canEmit(interval: number): boolean {
+    const now = Date.now();
+    if (this.startTime == 0) this.startTime = now;
+    const delta = now - this.startTime;
+    if (delta > interval) {
+      this.startTime = now;
+      return true;
+    }
+    return false;
   }
   handleMouseDown(e: MouseEvent) {
     if (!this.mouseDown) {
@@ -114,16 +133,21 @@ export default class InputDial extends Vue {
 .dial-container {
   width: fit-content;
   user-select: none;
-  padding: 16px;
+  padding: 12px 8px;
   border: 1.7px solid #514f55;
   border-radius: 8px;
+}
+.dial-base:hover{
+  transition-duration: 0.2s;
+  background-color: rgb(75, 73, 73);
+
 }
 
 .dial-base {
   padding: 4px;
   margin: 0px auto 16px;
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   border-radius: 100px;
   background-color: rgb(65, 65, 65);
   box-shadow: 30px 6px 13px 0px #00000017 inset;
@@ -136,13 +160,14 @@ export default class InputDial extends Vue {
 }
 .circle {
   transition-duration: 0.2s;
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   background-color: rgb(209, 209, 209);
   border-radius: 40px;
   box-shadow: 0px 5.5px 5.5px 0px #00000040 inset;
 }
-.circleHover, .circle:hover {
+.circleHover,
+.circle:hover {
   background: #ffde6a;
 }
 .noevents {

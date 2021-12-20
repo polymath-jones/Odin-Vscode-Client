@@ -4,7 +4,7 @@
 
 <style>
 .scrollbar-track{
-  background-color: #84828e63 !important;
+  background-color: #84828e !important;
 }
 
 * {

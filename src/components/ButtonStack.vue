@@ -22,6 +22,7 @@
       :id="button.id"
       :fill="fill"
       :compact="!styled"
+      :compressed="optimize"
       :pilled="pilled"
       :highlighted="styled"
       @click="handleClick(idx)"
@@ -44,6 +45,7 @@ import StackButton from "./StackButton.vue";
     fill: String,
     wide: Boolean,
     spread: Boolean,
+    optimize: Boolean
   },
   components: { StackButton },
 })
@@ -63,7 +65,7 @@ export default class ButtonStack extends Vue {
         if (!this.state[idx].state) {
           this.state[idx].state = true;
           this.$emit("update:buttons", this.state);
-          this.$emit("changeScreen", idx)
+          this.$emit("changed", idx)
         }
       } else {
         this.state[i].state = false;
