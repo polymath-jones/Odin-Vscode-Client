@@ -221,7 +221,7 @@ export default class HelloWorld extends Vue {
   leftPaneButtons = [{ id: "", source: "", state: false, placeholder: "" }];
   rightPaneButtons = [{ id: "", source: "", state: false, placeholder: "" }];
   historyButtons = [{ id: "", source: "", placeholder: "" }];
-  currentStyleSource = "";
+  currentStyleSource = "Start styling to view";
 
   get maxWidth(): any {
     return store.state.viewData.windowConstriants.max;
@@ -245,8 +245,6 @@ export default class HelloWorld extends Vue {
     this.selectTest = this.toolStates.selectEntries;
   }
   mounted() {
-    console.log(this.prism);
-
     document.ondragstart = (e: Event) => {
       e.stopPropagation();
       e.preventDefault();

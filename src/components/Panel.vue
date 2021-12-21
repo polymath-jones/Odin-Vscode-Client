@@ -20,8 +20,7 @@ props: closed width height, animation: left,right, bottom, top, opacity
     <hr />
     <div
       :style="`max-height: ${height}px;`"
-      class="panel-content"
-      data-scrollbar
+      class="panel-content custom-scroll"
     >
       <slot></slot>
     </div>

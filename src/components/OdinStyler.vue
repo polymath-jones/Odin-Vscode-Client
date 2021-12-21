@@ -16,7 +16,7 @@
     ></tool-button>
     <hr />
 
-    <div class="sections-container" >
+    <div class="sections-container custom-scroll">
       <odin-drawer placeholder="Layout">
         <layout-section></layout-section>
       </odin-drawer>
@@ -49,7 +49,7 @@ import SmoothScrollbar from "smooth-scrollbar";
 export default class OdinStyler extends Vue {
   classEntries = new Map<string, { text: string; iconSource: string }>();
   beforeMount() {
-      SmoothScrollbar.initAll()
+    SmoothScrollbar.initAll();
     this.classEntries = ToolStates.getInstance().selectEntries;
   }
 }
@@ -63,8 +63,10 @@ export default class OdinStyler extends Vue {
   min-height: 500px;
   height: 100%;
 }
-.sections-container{
-  max-height: 90vh;
+.sections-container {
+  border-radius: 10px;
+  overflow-y: auto;
+  max-height: 65vh;
 }
 hr {
   background-color: #ffff;

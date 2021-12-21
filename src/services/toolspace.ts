@@ -182,7 +182,7 @@ export class Toolspace implements Space {
 
     }
     checkLocked(elt: HTMLElement): boolean {
-        if (elt.hasAttribute('odin-locked'))
+        if (elt && elt.hasAttribute('odin-locked'))
             if (elt.getAttribute('odin-locked') == 'true')
                 return true;
             else
