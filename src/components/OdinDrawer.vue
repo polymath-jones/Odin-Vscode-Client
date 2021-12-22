@@ -16,8 +16,10 @@
         </p>
       </div>
     </div>
-    <div :class="{ collapsed: collapsed }" class="select-content">
-      <slot></slot>
+    <div :class="{ collapsed: collapsed }" class="select-content custom-scroll">
+      <div style="padding: 12px" class="select-wrapper">
+        <slot></slot>
+      </div>
     </div>
   </div>
 </template>
@@ -40,8 +42,7 @@ export default class OdinDrawer extends Vue {
   arrowIcon = require("../assets/icons/arrow.svg");
   collapsed = true;
 
-  mounted() {
-  }
+  mounted() {}
 
   handleClick(e: Event) {
     if ((e.target as HTMLElement).id !== "editor") {
@@ -79,12 +80,10 @@ export default class OdinDrawer extends Vue {
   transform: rotate(90deg);
 }
 .select-content {
-  overflow: hidden;
-  height: 300px;
+  overflow: auto;
   background-color: #272727;
   animation: reveal 0.15s ease-in-out 1 forwards;
   border-radius: 10px;
-  padding: 12px;
 }
 .drawer-placeholder {
   font-size: 13px;

@@ -44,7 +44,8 @@ export default class WindowResizer extends Vue {
   }
 
   get minWidth(): any {
-    return store.state.viewData.windowConstriants.min;
+     const min = store.state.viewData.windowConstriants.min;
+    return min > this.containerWidth ? this.containerWidth : min;
   }
 
   get containerWidth(): any {
@@ -121,7 +122,7 @@ export default class WindowResizer extends Vue {
     document.addEventListener("mouseup", this.handleMouseUp);
 
     this.$watch("maxWidth", (value: number, old: number) => {
-      this.currentWidth = value;
+        this.currentWidth = value;
     });
   }
 }
@@ -129,6 +130,7 @@ export default class WindowResizer extends Vue {
 
 <style scoped>
 .resizer-container {
+  transition: 0.2s ease-in-out;
   box-sizing: border-box;
   position: relative;
   margin: auto;
@@ -165,6 +167,7 @@ export default class WindowResizer extends Vue {
   pointer-events: none;
 }
 .highlight {
+  transition-duration: 0s;
   outline: #6fcf97 solid 1px;
 }
 </style>

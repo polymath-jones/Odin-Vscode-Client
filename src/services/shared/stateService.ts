@@ -45,20 +45,20 @@ export class StateService {
             margin: 0px;
             padding: 0px;
         }
-        body{
+        body, .custom-scroll{
             background-color: #57575B;
         }
-        body::-webkit-scrollbar-track {
+        body::-webkit-scrollbar-track, .custom-scroll::-webkit-scrollbar-track  {
             -webkit-box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.123);
             background-color: #84828E;
         }
 
-        body::-webkit-scrollbar {
+        body::-webkit-scrollbar, .custom-scroll::-webkit-scrollbar {
             width: 8px;
             background-color: #84828E;
         }
 
-        body::-webkit-scrollbar-thumb {
+        body::-webkit-scrollbar-thumb,  .custom-scroll::-webkit-scrollbar-thumb {
             -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.205);
             background-color: #313133;
         }

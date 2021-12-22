@@ -313,6 +313,14 @@ export default class HelloWorld extends Vue {
         });
         break;
       }
+
+       case "wide": {
+        store.commit("setWindowConstraints", {
+          min: 1024,
+          max: 1920,
+        });
+        break;
+      }
     }
   }
   handlePanelClose() {
@@ -345,6 +353,7 @@ export default class HelloWorld extends Vue {
   loaded() {
     this.root = this.$refs.workspace as HTMLIFrameElement;
     this.styleSheet = this.root.contentDocument!.createElement("style");
+    this.styleSheet.setAttribute("odin-id","odinStyleSheet");
     this.styleSheet.innerHTML = StateService.getInstance()
       .getStyleParser()
       .print() as string;
@@ -439,7 +448,7 @@ export default class HelloWorld extends Vue {
 }
 .left-pane,
 .right-pane {
-  padding: 40px 10px 16px;
+  padding: 2px 10px 16px;
   height: 100%;
   overflow: hidden;
 }
@@ -517,7 +526,7 @@ iframe {
   flex-direction: column;
 }
 .panel-containers {
-  margin-top: 16px;
+  margin-top: 10px;
   flex-grow: 1;
 }
 </style>

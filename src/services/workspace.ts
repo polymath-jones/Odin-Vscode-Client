@@ -7,6 +7,7 @@ import * as xmlDom from 'xmldom'
 import { HistoryService, OPERTATION_MODE, OPERTATION_TYPE, State } from './shared/historyService';
 import { Toolspace } from './toolspace';
 import store from "@/store";
+import { traverseNode } from '@vue/compiler-core';
 
 
 var instance: Workspace;
@@ -22,7 +23,14 @@ export class Workspace implements Space {
     resizeObserver?: ResizeObserver;
     historyService: HistoryService;
     selected: Array<HTMLElement> = new Array();
-    scale = 0
+    scale = 0;
+    workbenchData!: {
+        root: HTMLElement,
+        element: HTMLElement,
+        previousSibling?: HTMLElement;
+        previousParent?: HTMLElement;
+
+    }
     private dz = require("./lib/detect-zoom");
 
 
@@ -30,35 +38,17 @@ export class Workspace implements Space {
 
         this.root = iframe;
         this.historyService = HistoryService.getInstance()
-        
+
         this.toggleAll(iframe.contentDocument!.body)
         this.registerHooks();
 
         iframe.contentDocument?.body.setAttribute('oncontextmenu', 'return false');
         iframe.contentWindow?.focus();
 
-        //this.testXmlDom();
+        this.testXmlDom();
     }
     testXmlDom() {
-        var template =
-            `
-            <template>
-            <div class="hello">lasdfsdfsdfljlj</div>
-            <div class="jiop">
-              {{ msg }}
-              <input @change="change" type="number" name="" id="in" />
-          
-              <iframe
-                @load="loaded"
-                src="/in.html"
-                id="workspace"
-                frameborder="0"
-              ></iframe>
-          
-            </div>
-          </template>
 
-        `
         var script =
             `
         import { Options, Vue } from "vue-class-component";
@@ -153,7 +143,7 @@ export class Workspace implements Space {
         })
 
 
-        console.log(src.print());
+        //  console.log(src.print());
 
 
 
@@ -184,9 +174,18 @@ export class Workspace implements Space {
         });
         },
           */
+        var template =
+            `
+        <template>
+        <div class="hello">lasdfsdfsdfljlj</div>
+        <Dial @click="handleit(h)" v-model:dt="data" ></Dial>
+        </div>
+      </template>
 
+    `
         let parser = xmlDom.DOMParser;
         let serializer = xmlDom.XMLSerializer;
+        let tags = ["<a ", "<a>", "</a>", "<abbr>", "<abbr ", "</abbr>", "<acronym>", "<acronym ", "</acronym>", "<address>", "<address ", "</address>", "<applet>", "<applet ", "</applet>", "<area>", "<area ", "</area>", "<article>", "</article>", "<article ", "<aside>", "<aside ", "</aside>", "<audio>", "<audio ", "</audio>", "<b>", "</b>", "<base>", "<base ", "</base>", "<basefont>", "<basefont ", "</basefont>", "<bdi>", "</bdi>", "<bdi ", "<bdo>", "</bdo>", "<bdo ", "<big>", "<big ", "</big>", "<blockquote>", "<blockquote ", "</blockquote>", "<body>", "<body ", "</body>", "<br ", "<br />", "<br>", "<br/>", "</br>", "<button>", "<button ", "</button>", "<canvas>", "</canvas>", "<canvas ", "<caption>", "<caption ", "</caption>", "<center>", "<center ", "</center>", "<cite>", "<cite ", "</cite>", "<code>", "<code ", "</code>", "<col>", "<col ", "</col>", "<colgroup>", "<colgroup ", "</colgroup>", "<datalist>", "<datalist ", "</datalist>", "<dd>", "</dd>", "<dd ", "<del>", "<del ", "</del>", "<details>", "<details ", "</details>", "<dfn>", "</dfn>", "<dfn ", "<dialog>", "<dialog ", "</dialog>", "<dir>", "</dir>", "<dir ", "<div>", "<div ", "</div>", "<dl>", "</dl>", "<dl ", "<dt>", "</dt>", "<dt ", "<em>", "<em ", "</em>", "<embed>", "</embed>", "<embed ", "<fieldset>", "<fieldset ", "</fieldset>", "<figcaption>", "</figcaption>", "<figcaption ", "<figure>", "<figure ", "</figure>", "<font ", "</font>", "<font>", "<footer>", "</footer>", "<footer ", "<form>", "</form>", "<form ", "<frame>", "</frame>", "<frame ", "<frameset>", "<frameset ", "</frameset>", "<h1>", "</h1>", "<h1 ", "<h2>", "</h2>", "<h2 ", "<h3>", "</h3>", "<h3 ", "<h4>", "</h4>", "<h4 ", "<h5>", "</h5>", "<h5 ", "<h6>", "</h6>", "<h6 ", "<head>", "</head>", "<head ", "<header>", "<header ", "</header>", "<hr>", "<hr ", "</hr>", "<html>", "</html>", "<html ", "<i>", "</i>", "<iframe>", "<iframe ", "</iframe>", "<img>", "</img>", "<img ", "<input>", "</input>", "<input ", "<ins>", "<ins ", "</ins>", "</kbd>", "<kbd>", "<kbd ", "<label>", "<label ", "</label>", "<legend>", "<legend ", "</legend>", "<li ", "<li>", "</li>", "<link>", "<link ", "</link>", "<main>", "<main ", "</main>", "<map>", "</map>", "<map ", "<mark>", "</mark>", "<mark ", "<meta>", "</meta>", "<meta ", "<meter>", "</meter>", "<meter ", "<nav>", "</nav>", "<nav ", "<noframes>", "</noframes>", "<noframes ", "<noscript>", "<noscript ", "</noscript>", "<object>", "<object ", "</object>", "<ol>", "</ol>", "<ol ", "<optgroup>", "</optgroup>", "<optgroup ", "<option>", "</option>", "<option ", "<output>", "<output ", "</output>", "<p>", "</p>", "<p ", "<param>", "<param ", "</param>", "<pre>", "</pre>", "<pre ", "<progress>", "<progress ", "</progress>", "<q>", "</q>", "<q ", "<rp>", "</rp>", "<rp ", "<rt>", "<rt ", "</rt>", "<ruby>", "</ruby>", "<ruby ", "<s>", "</s>", "<s ", "<samp>", "</samp>", "<samp ", "<section>", "</section>", "<section ", "<select>", "</select>", "<select ", "<small>", "<small ", "</small>", "<source>", "</source>", "<source ", "<span>", "<span ", "</span>", "<strike>", "</strike>", "<strike ", "<strong>", "<strong ", "</strong>", "<style>", "</style>", "<style ", "<sub>", "<sub ", "</sub>", "<summary>", "</summary>", "<summary ", "<sup>", "<sup ", "</sup>", "<table ", "<table>", "</table>", "<tbody>", "</tbody>", "<tbody ", "<td>", "<td ", "</td>", "<textarea>", "<textarea ", "</textarea>", "<tfoot>", "</tfoot>", "<tfoot ", "<th>", "</th>", "<th ", "<thead>", "</thead>", "<thead ", "<time>", "<time ", "</time>", "<title>", "</title>", "<title ", "<tr>", "<tr ", "</tr>", "<track>", "</track>", "<track ", "<tt>", "</tt>", "<tt ", "<u>", "</u>", "<ul ", "<ul>", "</ul>", "<var>", "<var ", "</var>", "<video>", "</video>", "<video ", "<wbr>", "<wbr ", "</wbr>"]
 
         const templateRegex = /(<template(\s|\S)*<\/template>)/gm;
         const importRegex = /(?<=<script)(>)(\s*)(?=(\s|\S))/gm;
@@ -204,10 +203,16 @@ export class Workspace implements Space {
         //CCS element registration 
         for (let i = 0; i < elts.length; i++) {
             const elt = elts.item(i)
-            if (elt!.tagName != 'template')
-                elt!.setAttribute('od-data-id', 'omo')
+            const tag = elt?.tagName.toLocaleLowerCase()!
+
+            const valid = tags.includes(`<${tag}>`)
+            if (!valid && elt?.tagName !== "template") {
+                elt?.setAttribute("odin-component", "true")
+                elt?.setAttribute("odin-id", "omo")
+            }
+            //elt!.setAttribute('od-data-id', 'omo')
         }
-        //   console.log((document as any).getElementsByAttributeValue('od-data-id', 'omo'))
+        console.log((document as any).getElementsByAttributeValue('odin-id', 'omo')[0])
 
         let sibling = root?.childNodes.item(1);
         root?.insertBefore(child, sibling!);
@@ -218,7 +223,7 @@ export class Workspace implements Space {
         // source = source.replace(addRegex, "{" + "MessageBox" + ",");
         output = output.replace(remXmlns, "");
 
-        //   console.log(output);
+        console.log(output);
 
 
 
@@ -254,6 +259,7 @@ export class Workspace implements Space {
         var lkeyDown = false;
         var pkeyDown = false;
         var xkeyDown = false;
+        var wkeyDown = false;
         var dkeyDown = false;
         var mouseDown = false;
         var editing = false;
@@ -918,6 +924,20 @@ export class Workspace implements Space {
                     gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
                 }
             }
+            else if (!wkeyDown && e.key === "w") {
+                if (altDown) {
+                    e.preventDefault()
+                    wkeyDown = true
+                    this.activateWorkBench(this.selected[0])
+                    gs.clear()
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                }
+            }
+            else if (e.key == "Escape") {
+                gs.clear()
+                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                this.deactivateWorkBench()
+            }
 
             else if (!pkeyDown && e.key === "p") {
 
@@ -978,6 +998,9 @@ export class Workspace implements Space {
             }
             else if (xkeyDown && e.key === "x") {
                 xkeyDown = false;
+            }
+            else if (wkeyDown && e.key === "w") {
+                wkeyDown = false;
             }
         });
 
@@ -1098,6 +1121,131 @@ export class Workspace implements Space {
             }
         });
 
+    }
+
+    activateWorkBench(elt: HTMLElement) {
+
+        let scrolls = 0
+        let gs = Guidespace.getInstance()
+        const benchStyle =
+            `
+        background: #1e1e1e;
+        position: fixed;
+        width: 100%;
+        height:100%;
+        top: 0px;
+        left: 0px;
+        padding: 20px;
+        z-index: 999999;
+        overflow: hidden;
+        `
+        const eltStyle =
+            `
+        position: relative;
+        top: 0px;
+        left: 0px;
+        transform: initial;
+        `
+
+        const benchRoot = this.root.contentDocument?.createElement("section")!
+        benchRoot.setAttribute('style', benchStyle)
+        benchRoot.setAttribute('id', "odin-workbench")
+        elt.setAttribute('style', eltStyle)
+        this.workbenchData =
+        {
+            root: benchRoot,
+            element: elt,
+            previousParent: elt.nextElementSibling ? undefined : elt.parentElement!,
+            previousSibling: elt.nextElementSibling as HTMLElement
+        }
+
+
+        elt.remove()
+        benchRoot.append(elt)
+
+        this.root.contentDocument?.body.append(benchRoot)
+        let mousedown = false
+        let x = 0;
+        let y = 0
+        let deltax = 0
+        let deltaY = 0
+        let scaleStyle = ""
+        let transformStyle = ""
+
+        benchRoot.addEventListener('wheel', event => {
+
+            if (event.ctrlKey) {
+                elt.style.transformOrigin = `${event.x}px ${event.y}px`
+                if (event.deltaY < 0)
+                    scrolls++
+                else
+                    scrolls--
+
+                let scale = scrolls >= 0 ? (1 + scrolls / 10) : 1 + scrolls / 20
+                if (scale > 0) {
+                    scaleStyle = ` scale(${scale}) `
+                    elt.style.transform = scaleStyle + transformStyle
+                }
+
+                gs.clear()
+                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                event.preventDefault()
+
+            }
+        }, true)
+
+        benchRoot.addEventListener('mousedown', event => {
+            if (event.button == 1) {
+                mousedown = true;
+                x = event.clientX
+                y = event.clientY
+                benchRoot.style.cursor = "grab"
+                event.preventDefault()
+                event.stopPropagation()
+
+            }
+
+        })
+
+        benchRoot.addEventListener('mousemove', event => {
+
+            if (mousedown) {
+                deltax += event.clientX - x
+                deltaY += event.clientY - y;
+                x = event.clientX
+                y = event.clientY
+
+                transformStyle = ` translate(${deltax}px,${deltaY}px) `
+                elt.style.transform = scaleStyle + transformStyle
+                event.preventDefault()
+            }
+
+        })
+        benchRoot.addEventListener('mouseup', event => {
+            mousedown = false
+            benchRoot.style.cursor = "initial"
+
+        })
+
+
+
+    }
+
+    deactivateWorkBench() {
+        let gs = Guidespace.getInstance()
+
+        if (this.workbenchData.root && this.workbenchData.root.parentElement) {
+            this.workbenchData.root.remove()
+            this.workbenchData.element.removeAttribute("style")
+            if (this.workbenchData.previousParent) {
+                this.workbenchData.previousParent.append(this.workbenchData.element)
+            }
+            else {
+                this.workbenchData.previousSibling?.before(this.workbenchData.element)
+            }
+            gs.clear()
+            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+        }
     }
 
     walkTheDOM(start: Node, func: (node: Node) => boolean) {

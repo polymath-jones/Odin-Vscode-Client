@@ -199,8 +199,7 @@ export class Guidespace implements Space {
 
                 }
 
-                this.drawPaddings(elt);
-                this.drawMargins(elt)
+
                 break;
             }
 
@@ -226,13 +225,15 @@ export class Guidespace implements Space {
                             const h = Math.floor(rect.height);
                             this.context.strokeRect(x, y, w, h);
 
-                             //text
-                    this.context.font = "14px Gilroy";
-                    if (y > 20)
-                        this.context.fillText(elt.tagName.toLowerCase() + `.${elt.classList.value}`, x, y - 4);
-                    else
-                        this.context.fillText(elt.tagName.toLowerCase() + `.${elt.classList.value}`, x, y + h + 12);
+                            //text
+                            this.context.font = "14px Gilroy";
+                            if (y > 20)
+                                this.context.fillText(elt.tagName.toLowerCase() + `.${elt.classList.value}`, x, y - 4);
+                            else
+                                this.context.fillText(elt.tagName.toLowerCase() + `.${elt.classList.value}`, x, y + h + 12);
 
+                            this.drawPaddings(elt);
+                            this.drawMargins(elt)
                         }
 
                     })
@@ -249,7 +250,7 @@ export class Guidespace implements Space {
 
         const offset = 0;
         this.context.strokeStyle = "#17f787";
-        if (elt.getAttribute('draggable') !== 'true'|| elt.getAttribute('odin-locked') == 'true') {
+        if (elt.getAttribute('draggable') !== 'true' || elt.getAttribute('odin-locked') == 'true') {
             this.context.strokeStyle = "#ff9500";
         }
         this.context.lineWidth = 2;
@@ -292,7 +293,7 @@ export class Guidespace implements Space {
         width: 100%; 
         height: 100%; 
         `: ` position:fixed;
-        z-index: 999999;
+        z-index: 99999999999;
         pointer-events: none;
         top:0;
         left:0;

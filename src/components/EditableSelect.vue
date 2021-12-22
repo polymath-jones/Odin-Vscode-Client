@@ -43,6 +43,7 @@ Items:: text icon id (map:: id -> text icon)
           ref="editor"
           id="editor"
           @blur="handleBlur"
+          @change="handleChange"
           :value="unitValue"
           v-if="dialMode"
           type="text"
@@ -152,6 +153,9 @@ export default class EditableSelect extends Vue {
         }
     });
   }
+  handleChange(value:any){
+    this.$emit("valueChanged",value)
+  }
   handleKeyDown(e: KeyboardEvent) {
     if (e.key == "Escape" || e.key == "Enter") {
       this.$nextTick(() => (this.$refs as any).editor.blur());
@@ -192,7 +196,8 @@ export default class EditableSelect extends Vue {
     const value = (target as HTMLInputElement).value;
     if (value !== this.currentItem) {
       if (this.dialMode) {
-        var num = Number.parseInt(value.replace(/[^\d-]/g, ""));
+        var num = Number.parseFloat(value.replace(/[^\d-.]/g, ""));
+        num = Number.parseFloat(num.toFixed(1));
         if (num || num == 0) this.$emit("update:value", num);
         else this.currentItem = this.unitValue;
       } else this.$emit("itemEdit", { id: this.currentId, value: value });

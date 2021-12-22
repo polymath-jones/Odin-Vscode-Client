@@ -19,6 +19,7 @@
     "resize-observer-polyfill": "^1.5.1",
     "smooth-scrollbar": "^8.7.0",
     "ts-morph": "^12.0.0",
+    "validate-html-tags": "^1.0.1",
     "vue": "^3.2.20",
     "vue-class-component": "^8.0.0-0",
     "vue-codemirror": "^4.0.6",

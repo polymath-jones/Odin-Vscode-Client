@@ -162,6 +162,7 @@ export class Toolspace implements Space {
                 "flex-shrink": undefined,
                 "flex-wrap": undefined,
                 "float": undefined,
+                "padding": undefined,
             }
             const rule = `.${this.selectedClasses[this.selectedClasses.length - 1]}`.trim()
             const parser = this.stateService.getStyleParser()
@@ -196,8 +197,9 @@ export class Toolspace implements Space {
 
         let gs = Guidespace.getInstance()
         let styleParser = this.stateService.getStyleParser()
+        let workbench = this.selected![0].id == "odin-workbench"
 
-        if (this.selected && !this.checkLocked(this.selected[0])) {
+        if (this.selected && (!this.checkLocked(this.selected[0]) || workbench)) {
 
             if (this.currentPrelude) {
                 if (this.selectedClasses.length == 0) {
@@ -282,7 +284,7 @@ export class Toolspace implements Space {
                 rule: `.${this.selectedClasses[this.selectedClasses.length - 1]}`,
                 declaration: data.declartion,
                 value: data.value,
-                precedence: data.precedence
+                precedence: data.precedence || workbench
             }
             const decValue = styleParser.get(false, params.rule, params.declaration, this.currentPrelude)
             if (decValue == undefined) {
@@ -295,9 +297,9 @@ export class Toolspace implements Space {
                     this.stateService.getStyleParser(),
                     this.currentPrelude
                 );
-                let declaration = this.stateService.getStyleParser().get(true, params.rule, params.declaration, this.currentPrelude)
+                let declaration = this.stateService.getStyleParser().get(true, params.rule, params.declaration, this.currentPrelude) as string
                 if (declaration)
-                    this.saveStyleDeclarationCreateToHistory(declaration as object, params.value, params.rule, this.currentPrelude)
+                    this.saveStyleDeclarationCreateToHistory(params.declaration, params.value, params.rule, this.currentPrelude)
             } else {
 
                 StyleEditors.updateDeclaration(
@@ -314,9 +316,9 @@ export class Toolspace implements Space {
 
                 this.timeOutIndex = setTimeout(() => {
 
-                    let declaration = this.stateService.getStyleParser().get(true, params.rule, params.declaration, this.currentPrelude)
+                    let declaration = this.stateService.getStyleParser().get(false, params.rule, params.declaration, this.currentPrelude) as string
                     if (declaration && this.startValue)
-                        this.saveStyleDeclarationUpdateToHistory(declaration as object, this.startValue, params.value, params.rule, this.currentPrelude)
+                        this.saveStyleDeclarationUpdateToHistory(params.declaration, this.startValue, params.value, params.rule, this.currentPrelude)
 
                     this.timeOutIndex = undefined
                 }, 200)
@@ -362,7 +364,7 @@ export class Toolspace implements Space {
     CUD ops for rules do not interract with history service
 
     */
-    saveStyleDeclarationUpdateToHistory(declaration: object, oldValue: string, newValue: string, selector: string, mediaPrelude?: string) {
+    saveStyleDeclarationUpdateToHistory(declaration: string, oldValue: string, newValue: string, selector: string, mediaPrelude?: string) {
 
         const state: State = {
             operationType: OPERTATION_TYPE.STYLE,
@@ -378,7 +380,7 @@ export class Toolspace implements Space {
         }
         this.historyService.push(state)
     }
-    saveStyleDeclarationCreateToHistory(declaration: object, newValue: string, selector: string, mediaPrelude?: string) {
+    saveStyleDeclarationCreateToHistory(declaration: string, newValue: string, selector: string, mediaPrelude?: string) {
 
         const state: State = {
             operationType: OPERTATION_TYPE.STYLE,

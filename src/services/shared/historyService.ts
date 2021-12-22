@@ -38,9 +38,9 @@ export enum OPERTATION_MODE {
 }
 
 export type StyleOperands = {
-    declaration: any;
-    selector: any;
-    rule: any;
+    declaration: string;
+    selector: string;
+    rule: string;
     oldValue: string;
     newValue: string;
     stylesheet: HTMLStyleElement;
@@ -80,8 +80,8 @@ export class HistoryService {
     private redoStack: Array<State>
 
     private constructor() {
-        this.redoStack = new Array()
-        this.undoStack = new Array()
+        this.redoStack = new Array<State>()
+        this.undoStack = new Array<State>()
     }
 
     static init() {
@@ -95,6 +95,8 @@ export class HistoryService {
             this.redoStack.splice(0)
         }
         this.undoStack.push(state);
+        console.log("state pushed");
+
 
     }
     static deserializeToStack(serialized: string, undo: boolean) {
@@ -116,12 +118,24 @@ export class HistoryService {
                             "previousSibling",
                             "parent",
                             "previousParent"].includes(operand)) {
-                                const odinID = operands[operand] as string
-                                const elt = Workspace.getInstance().getRoot().contentDocument?.querySelector(`[odin-id="${odinID.trim()}"]`)
-                                operands[operand] = elt
+                            const odinID = operands[operand] as string
+                            const elt = Workspace.getInstance().getRoot().contentDocument?.querySelector(`[odin-id="${odinID.trim()}"]`)
+                            operands[operand] = elt
                         }
                     })
                     break
+                }
+                case OPERTATION_TYPE.STYLE:{
+                    const operands = deserializedState.operands
+                    Object.keys(operands).forEach(operand => {
+                        if (operand = "stylesheet") {
+                            const odinID = operands[operand] as string
+                            const elt = Workspace.getInstance().getRoot().contentDocument?.querySelector(`[odin-id="${odinID.trim()}"]`)
+                            operands[operand] = elt
+                        }
+                    })
+                    break
+
                 }
             }
 
@@ -164,6 +178,27 @@ export class HistoryService {
                     transformed.push(JSON.stringify(transformedState));
                     break;
                 }
+                case OPERTATION_TYPE.STYLE: {
+                    const ops = state.operands as StyleOperands
+
+                    const operands = {
+                        declaration: ops.declaration,
+                        selector: ops.selector,
+                        rule: ops.rule,
+                        oldValue: ops.oldValue,
+                        stylesheet: "odinStyleSheet",
+                        mediaPrelude: ops.mediaPrelude,
+                    }
+
+                    const transformedState = {
+                        operands: operands,
+                        operationType: state.operationType,
+                        operationMode: state.operationMode
+                    }
+
+                    transformed.push(JSON.stringify(transformedState));
+                    break;
+                }
             }
         }
 
@@ -173,94 +208,94 @@ export class HistoryService {
 
         if (this.undoStack.length > 0) {
             const state = this.undoStack.pop()!
+            console.log(state);
+
             //update changes
+
+             
             switch (state.operationType) {
-                case OPERTATION_TYPE.DOM: {
-
-                    switch (state.operationMode) {
-                        case OPERTATION_MODE.UPDATE: {
-                            const operands = state.operands as DomOperands
-                            if (operands.element.parentElement) {
-                                if (operands.previousSibling) {
-                                    TemplateEditors.placeInDOM(operands.previousSibling, operands.element, PLACEMENT_MODE.BEFORE, false);
-                                }
-                                else {
-                                    TemplateEditors.placeInDOM(operands.previousParent, operands.element, PLACEMENT_MODE.INSIDE, false);
-
-                                }
-                                break
-                            }
-                        }
-
-                        case OPERTATION_MODE.DELETE: {
-                            const operands = state.operands as DomOperands
-                            if (operands.previousSibling) {
-                                TemplateEditors.placeInDOM(operands.previousSibling, operands.element, PLACEMENT_MODE.BEFORE, false);
-                            }
-                            else {
-                                TemplateEditors.placeInDOM(operands.previousParent, operands.element, PLACEMENT_MODE.INSIDE, false);
-
-                            }
-                            break
-                        }
-
-                        case OPERTATION_MODE.CREATE: {
-                            const operands = state.operands as DomOperands
-                            TemplateEditors.deleteInDOM(operands.element);
-                            break
-                        }
-                        case OPERTATION_MODE.UPDATE_TEXT: {
-                            const operands = state.operands as DomOperands
-                            operands.element.innerHTML = operands.previousText
-                            break;
-                        }
-                    }
-
-                    break;
-                }
-                case OPERTATION_TYPE.STYLE: {
-                    switch (state.operationMode) {
-                        case OPERTATION_MODE.UPDATE_DECLARATION: {
-
-                            const ops = (state.operands as StyleOperands)
-                            const sel = ops.selector as string
-                            const dec = ops.declaration.getNameAsString()
-                            const val = ops.oldValue as string
-
-                            // console.log("undoing declaration");
-
-                            console.log(val);
-
-                            StyleEditors.updateDeclaration(
-                                { rule: sel, declaration: dec, value: val, precedence: false },
-                                ops.stylesheet,
-                                StateService.getInstance().getStyleParser(), ops.mediaPrelude
-                            );
-                            Toolspace.getInstance().updateUIState()
-                            break;
-                        }
-
-                        case OPERTATION_MODE.CREATE_DECLARATION: {
-
-                            const ops = (state.operands as StyleOperands)
-                            const sel = ops.selector as string
-                            const dec = ops.declaration.getNameAsString()
-                            StyleEditors.removeDeclaration(
-                                { rule: sel, declaration: dec },
-                                ops.stylesheet,
-                                StateService.getInstance().getStyleParser(), ops.mediaPrelude
-                            )
-                            Toolspace.getInstance().updateUIState()
-                            break;
-                        }
-                    }
-                    break;
-                }
-            }
-
+                 case OPERTATION_TYPE.DOM: {
+ 
+                     switch (state.operationMode) {
+                         case OPERTATION_MODE.UPDATE: {
+                             const operands = state.operands as DomOperands
+                             if (operands.element.parentElement) {
+                                 if (operands.previousSibling) {
+                                     TemplateEditors.placeInDOM(operands.previousSibling, operands.element, PLACEMENT_MODE.BEFORE, false);
+                                 }
+                                 else {
+                                     TemplateEditors.placeInDOM(operands.previousParent, operands.element, PLACEMENT_MODE.INSIDE, false);
+ 
+                                 }
+                                 break
+                             }
+                         }
+ 
+                         case OPERTATION_MODE.DELETE: {
+                             const operands = state.operands as DomOperands
+                             if (operands.previousSibling) {
+                                 TemplateEditors.placeInDOM(operands.previousSibling, operands.element, PLACEMENT_MODE.BEFORE, false);
+                             }
+                             else {
+                                 TemplateEditors.placeInDOM(operands.previousParent, operands.element, PLACEMENT_MODE.INSIDE, false);
+ 
+                             }
+                             break
+                         }
+ 
+                         case OPERTATION_MODE.CREATE: {
+                             const operands = state.operands as DomOperands
+                             TemplateEditors.deleteInDOM(operands.element);
+                             break
+                         }
+                         case OPERTATION_MODE.UPDATE_TEXT: {
+                             const operands = state.operands as DomOperands
+                             operands.element.innerHTML = operands.previousText
+                             break;
+                         }
+                     }
+ 
+                     break;
+                 }
+                 case OPERTATION_TYPE.STYLE: {
+                     switch (state.operationMode) {
+                         case OPERTATION_MODE.UPDATE_DECLARATION: {
+ 
+                             const ops = (state.operands as StyleOperands)
+                             const sel = ops.selector 
+                             const dec = ops.declaration 
+                             const val = ops.oldValue
+ 
+                             StyleEditors.updateDeclaration(
+                                 { rule: sel, declaration: dec, value: val, precedence: false },
+                                 ops.stylesheet,
+                                 StateService.getInstance().getStyleParser(), ops.mediaPrelude
+                             );
+                             Toolspace.getInstance().updateUIState()
+                             break;
+                         }
+ 
+                         case OPERTATION_MODE.CREATE_DECLARATION: {
+ 
+                             const ops = (state.operands as StyleOperands)
+                             const sel = ops.selector 
+                             const dec = ops.declaration
+                             StyleEditors.removeDeclaration(
+                                 { rule: sel, declaration: dec },
+                                 ops.stylesheet,
+                                 StateService.getInstance().getStyleParser(), ops.mediaPrelude
+                             )
+                             Toolspace.getInstance().updateUIState()
+                             break;
+                         }
+                     }
+                     break;
+                 }
+             }
+ 
 
             this.redoStack.push(state);
-            console.log(this.undoStack, this.redoStack);
+            console.log(this.undoStack, this.redoStack, "from undo log");
 
         }
     }
@@ -268,91 +303,93 @@ export class HistoryService {
         if (this.redoStack.length > 0) {
             const state = this.redoStack.pop()!
             //update changes
-            switch (state.operationType) {
-                case OPERTATION_TYPE.DOM: {
-
-                    switch (state.operationMode) {
-                        case OPERTATION_MODE.UPDATE: {
-                            const operands = state.operands as DomOperands
-                            if (operands.element.parentElement) {
-                                if (operands.sibling) {
-                                    TemplateEditors.placeInDOM(operands.sibling, operands.element, PLACEMENT_MODE.BEFORE, false);
-                                }
-                                else {
-                                    TemplateEditors.placeInDOM(operands.parent, operands.element, PLACEMENT_MODE.INSIDE, false);
-
-                                }
-                            }
-                            break;
-                        }
-
-                        case OPERTATION_MODE.DELETE: {
-                            const operands = state.operands as DomOperands
-                            TemplateEditors.deleteInDOM(operands.element)
-                            break
-                        }
-                        case OPERTATION_MODE.CREATE: {
-                            const operands = state.operands as DomOperands
-                            if (operands.sibling) {
-                                TemplateEditors.placeInDOM(operands.sibling, operands.element, PLACEMENT_MODE.BEFORE, false);
-                            }
-                            else {
-                                TemplateEditors.placeInDOM(operands.parent, operands.element, PLACEMENT_MODE.INSIDE, false);
-
-                            }
-                            break
-                        }
-                        case OPERTATION_MODE.UPDATE_TEXT: {
-                            const operands = state.operands as DomOperands
-                            operands.element.innerHTML = operands.text
-                            break;
-                        }
-                    }
-
-                    break;
-                }
-
-                case OPERTATION_TYPE.STYLE: {
-                    switch (state.operationMode) {
-                        case OPERTATION_MODE.UPDATE_DECLARATION: {
-
-                            const ops = (state.operands as StyleOperands)
-                            const sel = ops.selector as string
-                            const dec = ops.declaration.getNameAsString()
-                            const val = ops.newValue as string
-
-                            StyleEditors.updateDeclaration(
-                                { rule: sel, declaration: dec, value: val, precedence: false },
-                                ops.stylesheet,
-                                StateService.getInstance().getStyleParser(), ops.mediaPrelude
-                            );
-                            Toolspace.getInstance().updateUIState()
-                            break;
-                        }
-
-                        case OPERTATION_MODE.CREATE_DECLARATION: {
-
-                            const ops = (state.operands as StyleOperands)
-                            const sel = ops.selector as string
-                            const dec = ops.declaration.getNameAsString()
-                            const val = ops.newValue as string
-
-                            StyleEditors.createDeclaration(
-                                { rule: sel, declaration: dec, value: val, precedence: false },
-                                ops.stylesheet,
-                                StateService.getInstance().getStyleParser(), ops.mediaPrelude
-                            )
-                            Toolspace.getInstance().updateUIState()
-                            break;
-                        }
-                    }
-                    break;
-                }
-
-            }
-
+             switch (state.operationType) {
+                 case OPERTATION_TYPE.DOM: {
+ 
+                     switch (state.operationMode) {
+                         case OPERTATION_MODE.UPDATE: {
+                             const operands = state.operands as DomOperands
+                             if (operands.element.parentElement) {
+                                 if (operands.sibling) {
+                                     TemplateEditors.placeInDOM(operands.sibling, operands.element, PLACEMENT_MODE.BEFORE, false);
+                                 }
+                                 else {
+                                     TemplateEditors.placeInDOM(operands.parent, operands.element, PLACEMENT_MODE.INSIDE, false);
+ 
+                                 }
+                             }
+                             break;
+                         }
+ 
+                         case OPERTATION_MODE.DELETE: {
+                             const operands = state.operands as DomOperands
+                             TemplateEditors.deleteInDOM(operands.element)
+                             break
+                         }
+                         case OPERTATION_MODE.CREATE: {
+                             const operands = state.operands as DomOperands
+                             if (operands.sibling) {
+                                 TemplateEditors.placeInDOM(operands.sibling, operands.element, PLACEMENT_MODE.BEFORE, false);
+                             }
+                             else {
+                                 TemplateEditors.placeInDOM(operands.parent, operands.element, PLACEMENT_MODE.INSIDE, false);
+ 
+                             }
+                             break
+                         }
+                         case OPERTATION_MODE.UPDATE_TEXT: {
+                             const operands = state.operands as DomOperands
+                             operands.element.innerHTML = operands.text
+                             break;
+                         }
+                     }
+ 
+                     break;
+                 }
+ 
+                 case OPERTATION_TYPE.STYLE: {
+                     switch (state.operationMode) {
+                         case OPERTATION_MODE.UPDATE_DECLARATION: {
+ 
+                             const ops = (state.operands as StyleOperands)
+                             const sel = ops.selector 
+                             const dec = ops.declaration 
+                             const val = ops.newValue 
+ 
+                             StyleEditors.updateDeclaration(
+                                 { rule: sel, declaration: dec, value: val, precedence: false },
+                                 ops.stylesheet,
+                                 StateService.getInstance().getStyleParser(), ops.mediaPrelude
+                             );
+                             Toolspace.getInstance().updateUIState()
+                             break;
+                         }
+ 
+                         case OPERTATION_MODE.CREATE_DECLARATION: {
+ 
+                             const ops = (state.operands as StyleOperands)
+                             const sel = ops.selector as string
+                             const dec = ops.declaration as string
+                             const val = ops.newValue as string
+ 
+                             StyleEditors.createDeclaration(
+                                 { rule: sel, declaration: dec, value: val, precedence: false },
+                                 ops.stylesheet,
+                                 StateService.getInstance().getStyleParser(), ops.mediaPrelude
+                             )
+                             Toolspace.getInstance().updateUIState()
+                             break;
+                         }
+                     }
+                     break;
+                 }
+ 
+             }
+ 
 
             this.undoStack.push(state);
+            console.log(this.undoStack, this.redoStack, "from redo log");
+
         }
     }
     static getInstance() {

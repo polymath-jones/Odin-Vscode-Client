@@ -10,7 +10,8 @@ export default createStore({
       "flex-grow": undefined,
       "flex-shrink": undefined,
       "flex-wrap": undefined,
-      "float": undefined
+      "float": undefined,
+      "padding": undefined
     },
     currentStyleSource: "",
     viewData: {

@@ -1,5 +1,5 @@
 <template>
-  <router-view />
+  <router-view class="domdd"/>
 </template>
 
 <style>

@@ -50,6 +50,7 @@ import StackButton from "./StackButton.vue";
   components: { StackButton },
 })
 export default class ButtonStack extends Vue {
+  
   state!: any;
   get buttons(): any {
     return (this.$props as any).buttons;

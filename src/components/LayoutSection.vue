@@ -9,6 +9,12 @@
       :wide="true"
       @changed="handleDisplayChange"
     ></button-stack>
+    <p class="display-label">Padding</p>
+    <input-dial
+      v-model:value="paddingValue"
+      style="margin-bottom: 20px"
+      @valueChanged="handlePaddingChange"
+    ></input-dial>
   </div>
 </template>
 
@@ -18,16 +24,23 @@ import { Toolspace } from "../services/toolspace";
 import store from "@/store";
 import { ToolStates } from "@/services/shared/toolStates";
 import ButtonStack from "./ButtonStack.vue";
+import InputDial from "./InputDial.vue";
 
 @Options({
   props: {},
-  components: { ButtonStack },
+  components: { ButtonStack, InputDial },
 })
 export default class LayoutSection extends Vue {
-
   displayButtons = [{ id: "", source: "", state: false, placeholder: "" }];
+  paddingValue = 0;
+  uiUpdate = false
+
   get display(): any {
     return store.state.data.display;
+  }
+
+  get padding(): any {
+    return store.state.data.padding;
   }
 
   beforeMount() {
@@ -37,6 +50,16 @@ export default class LayoutSection extends Vue {
     this.$watch("display", (value: any, old: any) => {
       for (let i = 0; i < this.displayButtons.length; i++) {
         this.displayButtons[i].state = value == this.displayButtons[i].id;
+      }
+    });
+
+    this.$watch("padding", (value: any, old: any) => {
+      if (value) {
+        let num = Number.parseFloat(value.replace(/[^\d-.]/g, ""));
+        num = Number.parseFloat(num.toFixed(1));
+
+        this.paddingValue = num;
+        this.uiUpdate = true;
       }
     });
   }
@@ -51,6 +74,13 @@ export default class LayoutSection extends Vue {
         states[i].state = false;
       }
     }
+  }
+  handlePaddingChange(data: { value: number; unit: string }) {
+    Toolspace.getInstance().updateStyle({
+      declartion: "padding",
+      value: data.value + data.unit,
+      precedence: false,
+    });
   }
 
   handleDisplayChange(index: number) {
@@ -69,7 +99,7 @@ export default class LayoutSection extends Vue {
   margin-top: 16px;
   color: #ffffff;
   font-size: 12px;
-  margin-left:4px;
+  margin-left: 4px;
 }
 .outline:focus {
   outline-style: none;

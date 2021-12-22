@@ -12,8 +12,9 @@
     <editable-select
       :mini="true"
       :dialMode="true"
-      v-model:value="val"
+      :value="val"
       :class="{ noevents: mouseDown }"
+      @valueChanged="handleInputChanged"
       @unitChanged="handleUnitChange"
     ></editable-select>
   </div>
@@ -24,13 +25,14 @@ import { Options, Vue } from "vue-class-component";
 import EditableSelect from "./EditableSelect.vue";
 
 @Options({
-  props: {},
+  props: { value: Number },
   components: {
     EditableSelect,
   },
 })
 export default class InputDial extends Vue {
   mouseDown = false;
+  externalChange = false;
   angle = 0.0;
   style = "";
   startX = 0;
@@ -39,17 +41,37 @@ export default class InputDial extends Vue {
   val = 0;
   revs = 1;
   currentUnit = "px";
+  floatUnits = ["em", "rem"];
   startTime = 0;
 
+  get value(): number {
+    return (this.$props as any).value;
+  }
+
   mounted() {
+    this.val = this.value;
+
+    //update on external mods
+    this.$watch("value", (val: number, _old: number) => {
+      this.externalChange = true;
+      this.val = val;
+    });
+
+    //map bidirectional val to degree
     this.$watch("val", (val: number, old: number) => {
       if (!this.mouseDown) {
         this.angle = (360 * val) / this.weight;
         this.style = `transform: rotate(${this.angle}deg);`;
       }
-     // if (this.canEmit(200))
-        this.$emit("valueChanged", { value: Math.floor(val), unit: this.currentUnit });
+      if (!this.externalChange) {
+        this.$emit("update:value", val);
+        this.$emit("valueChanged", {
+          value: val,
+          unit: this.currentUnit,
+        });
+      }
     });
+
     document.addEventListener("mousemove", (e) => {
       if (this.mouseDown) {
         const rect = (this.$refs.base as HTMLElement).getBoundingClientRect();
@@ -69,7 +91,11 @@ export default class InputDial extends Vue {
         this.startX = e.clientX;
         this.startY = e.clientY;
         this.style = `transform: rotate(${this.angle}deg);`;
-        this.val += (delta / 360) * this.weight * this.revs;
+        let weight = this.floatUnits.includes(this.currentUnit)
+          ? 1
+          : this.weight;
+        this.externalChange = false;
+        this.val += (delta / 360) * weight * this.revs;
       }
     });
     document.addEventListener("mouseup", (e) => {
@@ -82,8 +108,15 @@ export default class InputDial extends Vue {
       }
     });
   }
-  handleDoubleClick(){
-    this.val = 0
+  handleInputChanged(data: any) {
+    this.externalChange = false;
+    let num = Number.parseFloat(data.target.value.replace(/[^\d-.]/g, ""));
+    num = Number.parseFloat(num.toFixed(1));
+    this.val = num;
+  }
+  handleDoubleClick() {
+    this.externalChange = false
+    this.val = 0;
   }
   handleUnitChange(data: { unit: string }) {
     this.currentUnit = data.unit;
@@ -137,10 +170,9 @@ export default class InputDial extends Vue {
   border: 1.7px solid #514f55;
   border-radius: 8px;
 }
-.dial-base:hover{
+.dial-base:hover {
   transition-duration: 0.2s;
   background-color: rgb(75, 73, 73);
-
 }
 
 .dial-base {
