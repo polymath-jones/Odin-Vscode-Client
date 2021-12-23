@@ -36,6 +36,7 @@ export class ToolStates {
   historyButtons = [{ id: "", source: "", placeholder: "" }];
   selectEntries = new Map<string, { text: string; iconSource: string }>();
   displayButtons = [{ id: "", source: "", state: false, placeholder: "" }];
+  stateEntries: Map<string, { text: string; iconSource: string; }>;
 
 
   private constructor() {
@@ -138,6 +139,16 @@ export class ToolStates {
       ["item1", { text: "item1", iconSource: this.icons['settings'] }],
       ["item2", { text: "item2", iconSource: this.icons['settings'] }],
       ["item3", { text: "item3", iconSource: this.icons['settings'] }],
+    ]);
+
+    this.stateEntries = new Map<string, { text: string; iconSource: string }>([
+      ["none", { text: "none", iconSource: '' }],
+      ["hover", { text: "hover", iconSource: '' }],
+      ["focus", { text: "focus", iconSource: '' }],
+      ["active", { text: "active", iconSource: '' }],
+      ["after", { text: "after", iconSource: '' }],
+      ["before", { text: "before", iconSource: '' }],
+     
     ]);
 
     this.displayButtons = [

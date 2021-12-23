@@ -96,6 +96,7 @@ export default class InputDial extends Vue {
           : this.weight;
         this.externalChange = false;
         this.val += (delta / 360) * weight * this.revs;
+        this.val =  Number.parseFloat(this.val.toFixed(1));
       }
     });
     document.addEventListener("mouseup", (e) => {

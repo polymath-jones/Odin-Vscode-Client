@@ -95,7 +95,7 @@ export class HistoryService {
             this.redoStack.splice(0)
         }
         this.undoStack.push(state);
-        console.log("state pushed");
+        // console.log("state pushed");
 
 
     }
@@ -208,7 +208,7 @@ export class HistoryService {
 
         if (this.undoStack.length > 0) {
             const state = this.undoStack.pop()!
-            console.log(state);
+            // console.log(state);
 
             //update changes
 
@@ -295,7 +295,7 @@ export class HistoryService {
  
 
             this.redoStack.push(state);
-            console.log(this.undoStack, this.redoStack, "from undo log");
+            // console.log(this.undoStack, this.redoStack, "from undo log");
 
         }
     }

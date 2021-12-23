@@ -39,7 +39,11 @@ export class StateService {
         this.styleParser = new StyleParser(`
 
         
-
+        .test:hover{
+            display: inline-block;
+            background: black !important;
+            padding: 40px;
+        }
         html, body {
             border: 0px;
             margin: 0px;

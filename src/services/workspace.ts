@@ -1,6 +1,6 @@
 import { Space } from './shared/interfaces/space';
 import { Guidespace, SELECTION_MODE, PLACEMENT_MODE } from './guidespace';
-import { Project, ObjectLiteralExpression, PropertyAssignment, ShorthandPropertyAssignmentStructure, StructureKind } from 'ts-morph';
+import { Project, ObjectLiteralExpression, PropertyAssignment, ShorthandPropertyAssignmentStructure, StructureKind, ThisTypeNode } from 'ts-morph';
 import { TemplateEditors } from './shared/templateEditor'
 import ResizeObserver from 'resize-observer-polyfill';
 import * as xmlDom from 'xmldom'
@@ -323,10 +323,10 @@ export class Workspace implements Space {
         * of an element to true
         */
         this.root.contentDocument!.addEventListener("dblclick", (e) => {
-            editing = true;
-            var elt = e.target as HTMLElement;
-            if (currentEditable !== elt && !this.checkLocked(elt)) {
 
+            var elt = e.target as HTMLElement;
+            if (currentEditable !== elt && !this.checkLocked(elt) && elt.id !== "odin-workbench") {
+                editing = true;
                 startHtml = elt.innerHTML
                 currentEditable = elt;
                 display = elt.style.display.toString();
@@ -337,6 +337,7 @@ export class Workspace implements Space {
                 Workspace.getInstance().toggleDraggable(elt, true);
                 gs.clear();
                 gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
+                e.stopPropagation()
             }
         });
 
@@ -1125,11 +1126,13 @@ export class Workspace implements Space {
 
     activateWorkBench(elt: HTMLElement) {
 
-        let scrolls = 0
+        if (this.workbenchData && this.workbenchData.root && this.workbenchData.root.parentElement) {
+            this.deactivateWorkBench()
+        }
         let gs = Guidespace.getInstance()
         const benchStyle =
             `
-        background: #1e1e1e;
+        background: radial-gradient(circle, rgb(118 118 118 / 50%) 0.2px, rgba(0, 0, 0, 0) 1px) 0% 0% / 16px 16px rgb(30, 30, 30);
         position: fixed;
         width: 100%;
         height:100%;
@@ -1145,6 +1148,7 @@ export class Workspace implements Space {
         top: 0px;
         left: 0px;
         transform: initial;
+        transition: none;
         `
 
         const benchRoot = this.root.contentDocument?.createElement("section")!
@@ -1165,33 +1169,61 @@ export class Workspace implements Space {
 
         this.root.contentDocument?.body.append(benchRoot)
         let mousedown = false
+        let scrolls = 0
         let x = 0;
         let y = 0
-        let deltax = 0
+        let deltaX = 0
         let deltaY = 0
         let scaleStyle = ""
         let transformStyle = ""
+        let scale = 1
+
+        elt.addEventListener('mousedown', e => {
+            if (e.button == 1)
+                benchRoot.style.cursor = "grab"
+        }, true)
 
         benchRoot.addEventListener('wheel', event => {
 
             if (event.ctrlKey) {
-                elt.style.transformOrigin = `${event.x}px ${event.y}px`
+
+                const rect = benchRoot.getBoundingClientRect()
+                elt.style.transformOrigin = `${rect.width / 2}px ${rect.height / 2}px`;
                 if (event.deltaY < 0)
                     scrolls++
-                else
-                    scrolls--
+                else {
+                    if (scale > 0)
+                        scrolls--
+                }
 
-                let scale = scrolls >= 0 ? (1 + scrolls / 10) : 1 + scrolls / 20
+
+                scale = scrolls >= 0 ? (1 + scrolls / 10) : 1 + scrolls / 20
                 if (scale > 0) {
                     scaleStyle = ` scale(${scale}) `
                     elt.style.transform = scaleStyle + transformStyle
                 }
 
-                gs.clear()
-                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                event.preventDefault()
-
             }
+            else {
+                const del = 100
+
+                if (event.shiftKey) {
+                    if (event.deltaY < 0)
+                        deltaX += del
+                    else
+                        deltaX -= del
+                } else {
+                    if (event.deltaY < 0)
+                        deltaY += del
+                    else
+                        deltaY -= del
+                }
+                transformStyle = ` translate(${deltaX}px,${deltaY}px) `
+                elt.style.transform = scaleStyle + transformStyle
+            }
+            gs.clear()
+            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+            event.preventDefault()
         }, true)
 
         benchRoot.addEventListener('mousedown', event => {
@@ -1209,13 +1241,21 @@ export class Workspace implements Space {
 
         benchRoot.addEventListener('mousemove', event => {
 
-            if (mousedown) {
-                deltax += event.clientX - x
-                deltaY += event.clientY - y;
+            if (mousedown && scale > 0) {
+
+                let dx = event.clientX - x
+                let dy = event.clientY - y;
+
+                dy *= (1 / scale)
+                dx *= (1 / scale)
+
+                deltaX += dx
+                deltaY += dy
+
                 x = event.clientX
                 y = event.clientY
 
-                transformStyle = ` translate(${deltax}px,${deltaY}px) `
+                transformStyle = ` translate(${deltaX}px,${deltaY}px) `
                 elt.style.transform = scaleStyle + transformStyle
                 event.preventDefault()
             }
@@ -1225,6 +1265,22 @@ export class Workspace implements Space {
             mousedown = false
             benchRoot.style.cursor = "initial"
 
+        })
+        document.addEventListener('mouseup', event => {
+            mousedown = false
+            benchRoot.style.cursor = "initial"
+
+        })
+
+        benchRoot.addEventListener('dblclick', event => {
+            if (!benchRoot.contains(event.target as Node) ||
+                benchRoot == (event.target as HTMLElement)) {
+                if (benchRoot.style.backgroundColor != "white")
+                    benchRoot.style.backgroundColor = "white"
+                else {
+                    benchRoot.style.backgroundColor = "rgb(30, 30, 30)"
+                }
+            }
         })
 
 

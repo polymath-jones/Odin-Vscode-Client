@@ -30,6 +30,7 @@ export class StyleParser {
     constructor(src: string) {
         try {
             this.styleSheet = this.parser.parse(src);
+            console.log(this.get(false,".test::after",undefined))
         }
         catch (e) {
             console.log(e);
@@ -287,6 +288,8 @@ export class StyleParser {
                 }
                 //both declarations and selectors
                 else {
+                    console.log(newSelectors);
+                    
                     this.styleSheet.insertRule(
                         new this.AST.Rule(
                             this.parser.parseSelectors(newSelectors),

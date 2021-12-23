@@ -103,6 +103,8 @@ export class Guidespace implements Space {
         return this.canvas;
     }
     drawPaddings(elt: HTMLElement) {
+
+
         const patternCanvas = document.createElement('canvas');
         const patternContext = patternCanvas.getContext('2d')!;
         patternCanvas.width = 5;
@@ -121,11 +123,14 @@ export class Guidespace implements Space {
         const w = Math.floor(rect.width);
         const h = Math.floor(rect.height);
 
+        const scaleX = (w / elt.offsetWidth);
+        const scaleY = (h / elt.offsetHeight);
+
         const style = this.root.contentWindow!.getComputedStyle(elt);
-        const left = parseInt(style.paddingLeft);
-        const right = parseInt(style.paddingRight);
-        const top = parseInt(style.paddingTop);
-        const bottom = parseInt(style.paddingBottom);
+        const left = parseInt(style.paddingLeft) * scaleX;
+        const right = parseInt(style.paddingRight) * scaleX;
+        const top = parseInt(style.paddingTop) * scaleY;
+        const bottom = parseInt(style.paddingBottom) * scaleY;
 
         const pattern = this.context.createPattern(patternCanvas, 'repeat');
         this.context.rect(x, y, w, h)
@@ -152,11 +157,14 @@ export class Guidespace implements Space {
         const w = Math.floor(rect.width);
         const h = Math.floor(rect.height);
 
+        const scaleX = (w / elt.offsetWidth);
+        const scaleY = (h / elt.offsetHeight);
+
         const style = this.root.contentWindow!.getComputedStyle(elt);
-        const left = parseInt(style.marginLeft);
-        const right = parseInt(style.marginRight);
-        const top = parseInt(style.marginTop);
-        const bottom = parseInt(style.marginBottom);
+        const left = parseInt(style.marginLeft) * scaleX;
+        const right = parseInt(style.marginRight) * scaleX;
+        const top = parseInt(style.marginTop) * scaleY;
+        const bottom = parseInt(style.marginBottom) * scaleY;
 
         const pattern = this.context.createPattern(patternCanvas, 'repeat');
         this.context.beginPath()
@@ -170,12 +178,16 @@ export class Guidespace implements Space {
             case SELECTION_MODE.HIGHLIGHT: {
                 //To achieve 1px lines
                 const elt = elts[0];
-                if (elt.getAttribute("contenteditable") !== "true") {
+                if (elt.getAttribute("contenteditable") !== "true" && elt.id !== "odin-workbench") {
                     this.context.strokeStyle = "#178df7";
                     this.context.fillStyle = "#178df7";
                     if (elt.getAttribute('draggable') !== 'true' || elt.getAttribute('odin-locked') == 'true') {
                         this.context.strokeStyle = "#f10e0e";
                         this.context.fillStyle = "#f10e0e";
+                    }
+                    else if (elt.getAttribute('odin-component') == 'true') {
+                        this.context.strokeStyle = "#a561ff";
+                        this.context.fillStyle = "#a561ff";
                     }
 
                     const offset = this.optimize ? 0 : 0.5;
@@ -207,14 +219,24 @@ export class Guidespace implements Space {
 
                 if (elts.length != 0) {
                     elts.forEach(elt => {
-                        if (elt.getAttribute("contenteditable") !== "true") {
+                        if (elt.getAttribute("contenteditable") !== "true" && elt.id !== "odin-workbench") {
+
+                            this.drawPaddings(elt);
+                            this.drawMargins(elt)
+
                             this.context.beginPath();
                             const offset = 0;
                             this.context.strokeStyle = "#178df7";
                             this.context.fillStyle = "#178df7";
+
+
                             if (elt.getAttribute('draggable') !== 'true' || elt.getAttribute('odin-locked') == 'true') {
                                 this.context.strokeStyle = "#f10e0e";
                                 this.context.fillStyle = "#f10e0e";
+                            }
+                            else if (elt.getAttribute('odin-component') == 'true') {
+                                this.context.strokeStyle = "#a561ff";
+                                this.context.fillStyle = "#a561ff";
                             }
                             this.context.lineWidth = 2;
 
@@ -225,6 +247,8 @@ export class Guidespace implements Space {
                             const h = Math.floor(rect.height);
                             this.context.strokeRect(x, y, w, h);
 
+
+
                             //text
                             this.context.font = "14px Gilroy";
                             if (y > 20)
@@ -232,8 +256,7 @@ export class Guidespace implements Space {
                             else
                                 this.context.fillText(elt.tagName.toLowerCase() + `.${elt.classList.value}`, x, y + h + 12);
 
-                            this.drawPaddings(elt);
-                            this.drawMargins(elt)
+
                         }
 
                     })
@@ -264,7 +287,6 @@ export class Guidespace implements Space {
         this.context.strokeRect(x, y, w, h)
 
     }
-
 
     clear() {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);

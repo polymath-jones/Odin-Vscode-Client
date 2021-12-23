@@ -59,6 +59,19 @@ export class Toolspace implements Space {
         else
             this.currentPrelude = undefined
     }
+    getStyleState(): string {
+
+        const psuedoClasses = ["hover", "active", "focus"]
+        const psuedoElements = ["after", "before"]
+        const styleState = store.state.currentStyleState
+
+        if (psuedoClasses.includes(styleState)) {
+            return `:${styleState}`
+        } else if (psuedoElements.includes(styleState)) {
+            return `::${styleState}`
+        }
+        return ""
+    }
 
     getRoot(): HTMLElement {
         return this.root
@@ -81,7 +94,7 @@ export class Toolspace implements Space {
 
         classList.forEach(val => {
 
-            if (mediaStyleRules.includes(`.${val}`)) {
+            if (mediaStyleRules.includes(`.${val}` + this.getStyleState())) {
                 mediaSelectedClasses.push(val)
             }
 
@@ -98,10 +111,10 @@ export class Toolspace implements Space {
 
             currentElt.classList.forEach(val => {
 
-                if (styleRules.includes(`.${val}`)) {
+                if (styleRules.includes(`.${val}` + this.getStyleState())) {
                     currentElt.classList.remove(val)
                 }
-                if (mediaStyleRules.includes(`.${val}`)) {
+                if (mediaStyleRules.includes(`.${val}` + this.getStyleState())) {
                     currentElt.classList.remove(val)
                 }
 
@@ -141,7 +154,7 @@ export class Toolspace implements Space {
         this.mediaSelectedClasses = mediaSelectedClasses
         this.updateUIState()
 
-        // console.log(mediaSelectedClasses);
+        //  console.log(styleRules,selectedClasses);
 
     }
     /** 
@@ -164,7 +177,9 @@ export class Toolspace implements Space {
                 "float": undefined,
                 "padding": undefined,
             }
-            const rule = `.${this.selectedClasses[this.selectedClasses.length - 1]}`.trim()
+
+
+            const rule = `.${this.selectedClasses[this.selectedClasses.length - 1]}`.trim() + this.getStyleState()
             const parser = this.stateService.getStyleParser()
             let entries = Object.entries(state);
 
@@ -193,13 +208,14 @@ export class Toolspace implements Space {
     }
     updateStyle(data: { declartion: string, value: string, precedence: boolean }) {
 
+        const styleState = this.getStyleState()
+
         this.checkIfMedia()
 
         let gs = Guidespace.getInstance()
         let styleParser = this.stateService.getStyleParser()
-        let workbench = this.selected![0].id == "odin-workbench"
 
-        if (this.selected && (!this.checkLocked(this.selected[0]) || workbench)) {
+        if (this.selected && (!this.checkLocked(this.selected[0]))) {
 
             if (this.currentPrelude) {
                 if (this.selectedClasses.length == 0) {
@@ -208,7 +224,7 @@ export class Toolspace implements Space {
                     this.selectedClasses.push(className);
 
                     this.stateService.getStyleParser().create(undefined, `.${className}`);
-                    this.stateService.getStyleParser().create(undefined, `.${className}`, undefined, this.currentPrelude);
+                    this.stateService.getStyleParser().create(undefined, `.${className}` + styleState, undefined, this.currentPrelude);
 
                     if (this.selected.length == 1) {
                         this.selected[0].classList.add(className);
@@ -222,8 +238,10 @@ export class Toolspace implements Space {
 
                     const className = this.selected[0].tagName.toLowerCase() + "-" + this.generateID();
                     this.selectedClasses.push(className);
+
                     this.stateService.getStyleParser().create(undefined, `.${className}`);
-                    this.stateService.getStyleParser().create(undefined, `.${className}`, undefined, this.currentPrelude);
+                    this.stateService.getStyleParser().create(undefined, `.${className}` + styleState, undefined, this.currentPrelude);
+
                     this.selected.forEach((elt) => elt.classList.add(className));
                 } else if (this.selectedClasses.length > 0) {
 
@@ -231,7 +249,7 @@ export class Toolspace implements Space {
                     this.resetSelected()
                     const sel = this.selectedClasses[this.selectedClasses.length - 1]
                     if (!this.mediaSelectedClasses.includes(sel)) {
-                        this.stateService.getStyleParser().create(undefined, `.${sel}`, undefined, this.currentPrelude);
+                        this.stateService.getStyleParser().create(undefined, `.${sel}` + styleState, undefined, this.currentPrelude);
                     }
                 }
             }
@@ -241,7 +259,12 @@ export class Toolspace implements Space {
                     const className = this.selected[0].tagName.toLowerCase() + "-" + this.generateID();
                     this.selectedClasses.push(className);
 
-                    this.stateService.getStyleParser().create(undefined, `.${className}`);
+
+
+                    if (styleState !== "")
+                        this.stateService.getStyleParser().create(undefined, `.${className}`);
+                    this.stateService.getStyleParser().create(undefined, `.${className}` + styleState);
+
 
                     if (this.selected.length == 1) {
                         this.selected[0].classList.add(className);
@@ -255,12 +278,15 @@ export class Toolspace implements Space {
 
                     const className = this.selected[0].tagName.toLowerCase() + "-" + this.generateID();
                     this.selectedClasses.push(className);
-                    this.stateService.getStyleParser().create(undefined, `.${className}`);
+                    if (styleState !== "")
+                        this.stateService.getStyleParser().create(undefined, `.${className}`);
+                    this.stateService.getStyleParser().create(undefined, `.${className}` + styleState);
                     this.selected.forEach((elt) => elt.classList.add(className));
                 }
                 else if (this.selectedClasses.length > 0 && this.selected.length > 1) {
 
-                    const rule = this.selectedClasses[this.selectedClasses.length - 1]
+                    const psuedoRegex = /(?<=\S)((:\S*)*|(::\S*)*)/g
+                    const rule = this.selectedClasses[this.selectedClasses.length - 1].replace(psuedoRegex, "").trim()
                     let commonClass = true
 
                     for (let i = 1; i < this.selected.length; i++) {
@@ -281,22 +307,29 @@ export class Toolspace implements Space {
 
 
             let params = {
-                rule: `.${this.selectedClasses[this.selectedClasses.length - 1]}`,
+                rule: `.${this.selectedClasses[this.selectedClasses.length - 1]}` + styleState,
                 declaration: data.declartion,
                 value: data.value,
-                precedence: data.precedence || workbench
+                precedence: data.precedence
             }
+
+
+            const rule = styleParser.get(false, params.rule, undefined, this.currentPrelude)
             const decValue = styleParser.get(false, params.rule, params.declaration, this.currentPrelude)
+
+
             if (decValue == undefined) {
-
-
-
+                if (rule == undefined && !this.currentPrelude) {
+                    this.stateService.getStyleParser().create(undefined, params.rule, undefined, this.currentPrelude);
+                }
                 StyleEditors.createDeclaration(
                     params,
                     this.styleSheet,
                     this.stateService.getStyleParser(),
                     this.currentPrelude
                 );
+
+
                 let declaration = this.stateService.getStyleParser().get(true, params.rule, params.declaration, this.currentPrelude) as string
                 if (declaration)
                     this.saveStyleDeclarationCreateToHistory(params.declaration, params.value, params.rule, this.currentPrelude)

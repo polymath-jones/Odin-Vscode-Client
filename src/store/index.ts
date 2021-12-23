@@ -14,6 +14,7 @@ export default createStore({
       "padding": undefined
     },
     currentStyleSource: "",
+    currentStyleState: "",
     viewData: {
       panelsVisiblity: {
         left: true,
@@ -56,6 +57,9 @@ export default createStore({
     },
     setStyleSource(state, payload) {
       state.currentStyleSource = payload
+    },
+    setStyleState(state, payload) {
+      state.currentStyleState = payload
     }
   },
   actions: {

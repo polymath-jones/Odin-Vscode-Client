@@ -6,14 +6,24 @@
       :editable="true"
       :items="classEntries"
     ></editable-select>
-    <tool-button
-      style="margin: 32px 0px 0px"
-      :pilled="true"
-      fill="#6FCF97"
-      textFill="#3E3D40"
-      placeholder="Cutomize Style"
-      @clicked="$emit('openCS')"
-    ></tool-button>
+    <div style="display: flex">
+      <tool-button
+        style="margin: 32px 0px 0px"
+        :pilled="true"
+        fill="#6FCF97"
+        textFill="#3E3D40"
+        placeholder="Cutomize Style"
+        @clicked="$emit('openCS')"
+      ></tool-button>
+
+      <editable-select
+        style="position: absolute; z-index: 9999; right: 22px; margin-top: 32px"
+        :mini="true"
+        :items="stateEntries"
+        @itemSelect="handleStateSelect"
+      ></editable-select>
+    </div>
+
     <hr />
 
     <div class="sections-container custom-scroll">
@@ -35,6 +45,7 @@ import EditableSelect from "./EditableSelect.vue";
 import InputDial from "./InputDial.vue";
 import ToolButton from "./ToolButton.vue";
 import SmoothScrollbar from "smooth-scrollbar";
+import store from "@/store";
 
 @Options({
   props: {},
@@ -48,9 +59,19 @@ import SmoothScrollbar from "smooth-scrollbar";
 })
 export default class OdinStyler extends Vue {
   classEntries = new Map<string, { text: string; iconSource: string }>();
+  stateEntries = new Map<string, { text: string; iconSource: string }>();
   beforeMount() {
     SmoothScrollbar.initAll();
     this.classEntries = ToolStates.getInstance().selectEntries;
+    this.stateEntries = ToolStates.getInstance().stateEntries;
+  }
+  handleStateSelect(data: any) {
+    const state = this.stateEntries.get(data.id)?.text;
+    if (state == "none") {
+      store.commit("setStyleState", "");
+    } else {
+      store.commit("setStyleState", state);
+    }
   }
 }
 </script>
