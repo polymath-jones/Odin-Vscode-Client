@@ -12,6 +12,7 @@ export namespace StyleEditors {
     export function updateDeclaration(params: { rule: string, declaration: string, value?: string, precedence: boolean }, styleSheet: HTMLStyleElement, styleParser: StyleParser, mediaPrelude?: string) {
 
         //if declaration does not exist create else update
+        params.precedence = true;
         let priority = params.precedence ? " !important" : ""
         if (!mediaPrelude) {
             if (params.value) styleParser.update(params.rule, params.declaration, `${params.value}${priority}`);
@@ -25,6 +26,7 @@ export namespace StyleEditors {
 
     export function createDeclaration(params: { rule: string, declaration: string, value?: string, precedence: boolean }, styleSheet: HTMLStyleElement, styleParser: StyleParser, mediaPrelude?: string) {
 
+        params.precedence = true;
         let priority = params.precedence ? " !important" : ""
         if (!mediaPrelude) {
             styleParser.create(params.rule, undefined, `{${params.declaration}:${params.value}${priority};}`)

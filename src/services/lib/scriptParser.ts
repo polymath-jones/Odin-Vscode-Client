@@ -69,6 +69,9 @@ export class ScriptParser {
         declaration!.remove()
     }
 
+    print():string{
+        return this.source.print()
+    }
 
 
 }

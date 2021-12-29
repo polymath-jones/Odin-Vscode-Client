@@ -12,6 +12,7 @@ import { StateService } from "../services/shared/stateService";
 import { HistoryService, OPERTATION_MODE, OPERTATION_TYPE, State } from "../services/shared/historyService";
 import { Guidespace, SELECTION_MODE } from "../services/guidespace";
 import store from "@/store";
+import { TemplateEditors } from "./shared/templateEditor";
 
 
 var instance: Toolspace;
@@ -154,6 +155,7 @@ export class Toolspace implements Space {
         this.mediaSelectedClasses = mediaSelectedClasses
         this.updateUIState()
 
+        currentElt.style.content = "4"
         //  console.log(styleRules,selectedClasses);
 
     }
@@ -215,7 +217,7 @@ export class Toolspace implements Space {
         let gs = Guidespace.getInstance()
         let styleParser = this.stateService.getStyleParser()
 
-        if (this.selected && (!this.checkLocked(this.selected[0]))) {
+        if (this.selected && (!this.checkLocked(this.selected[0]) && this.selected[0].id !== "odin-workbench")) {
 
             if (this.currentPrelude) {
                 if (this.selectedClasses.length == 0) {
@@ -227,10 +229,24 @@ export class Toolspace implements Space {
                     this.stateService.getStyleParser().create(undefined, `.${className}` + styleState, undefined, this.currentPrelude);
 
                     if (this.selected.length == 1) {
-                        this.selected[0].classList.add(className);
+                        const elt = this.selected[0]
+                        const doc = this.stateService.getTemplateParser().getDocument()
+                        const tempElt = TemplateEditors.getTemplateElement(doc, elt);
+
+                        tempElt?.classList.add(className)
+                        elt.classList.add(className);
                     }
                     else if (this.selected.length > 1) {
-                        this.selected.forEach((elt) => elt.classList.add(className));
+
+                        const doc = this.stateService.getTemplateParser().getDocument()
+                        this.selected.forEach((elt) => {
+
+                            const tempElt = TemplateEditors.getTemplateElement(doc, elt);
+
+                            tempElt?.classList.add(className)
+                            elt.classList.add(className
+                            )
+                        });
                     }
 
                 }
@@ -242,7 +258,15 @@ export class Toolspace implements Space {
                     this.stateService.getStyleParser().create(undefined, `.${className}`);
                     this.stateService.getStyleParser().create(undefined, `.${className}` + styleState, undefined, this.currentPrelude);
 
-                    this.selected.forEach((elt) => elt.classList.add(className));
+                    const doc = this.stateService.getTemplateParser().getDocument()
+                    this.selected.forEach((elt) => {
+
+                        const tempElt = TemplateEditors.getTemplateElement(doc, elt);
+
+                        tempElt?.classList.add(className)
+                        elt.classList.add(className
+                        )
+                    });
                 } else if (this.selectedClasses.length > 0) {
 
                     //console.log(this.mediaSelectedClasses);
@@ -267,10 +291,23 @@ export class Toolspace implements Space {
 
 
                     if (this.selected.length == 1) {
-                        this.selected[0].classList.add(className);
+                        const elt = this.selected[0]
+                        const doc = this.stateService.getTemplateParser().getDocument()
+                        const tempElt = TemplateEditors.getTemplateElement(doc, elt);
+
+                        tempElt?.classList.add(className)
+                        elt.classList.add(className);
                     }
                     else if (this.selected.length > 1) {
-                        this.selected.forEach((elt) => elt.classList.add(className));
+                        const doc = this.stateService.getTemplateParser().getDocument()
+                        this.selected.forEach((elt) => {
+
+                            const tempElt = TemplateEditors.getTemplateElement(doc, elt);
+
+                            tempElt?.classList.add(className)
+                            elt.classList.add(className
+                            )
+                        });
                     }
 
                 }
@@ -281,7 +318,15 @@ export class Toolspace implements Space {
                     if (styleState !== "")
                         this.stateService.getStyleParser().create(undefined, `.${className}`);
                     this.stateService.getStyleParser().create(undefined, `.${className}` + styleState);
-                    this.selected.forEach((elt) => elt.classList.add(className));
+                    const doc = this.stateService.getTemplateParser().getDocument()
+                    this.selected.forEach((elt) => {
+
+                        const tempElt = TemplateEditors.getTemplateElement(doc, elt);
+
+                        tempElt?.classList.add(className)
+                        elt.classList.add(className
+                        )
+                    });
                 }
                 else if (this.selectedClasses.length > 0 && this.selected.length > 1) {
 
@@ -297,7 +342,15 @@ export class Toolspace implements Space {
                         const className = this.selected[0].tagName.toLowerCase() + "-" + this.generateID();
                         this.selectedClasses.push(className);
                         this.stateService.getStyleParser().create(undefined, `.${className}`);
-                        this.selected.forEach((elt) => elt.classList.add(className));
+                        const doc = this.stateService.getTemplateParser().getDocument()
+                        this.selected.forEach((elt) => {
+
+                            const tempElt = TemplateEditors.getTemplateElement(doc, elt);
+
+                            tempElt?.classList.add(className)
+                            elt.classList.add(className
+                            )
+                        });
                     }
                 }
 

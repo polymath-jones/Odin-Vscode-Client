@@ -136,10 +136,11 @@ export default class WindowResizer extends Vue {
   margin: auto;
   display: flex;
   height: 100%;
-  background-color: #313133;
+  background-color: #ffffff;
   border-radius: 10px;
 }
 .resizer-handle {
+    background-color: #1e1e1e;
   display: flex;
   align-items: center;
   border-radius: 0px 10px 0px 0px;

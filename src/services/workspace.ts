@@ -7,7 +7,7 @@ import * as xmlDom from 'xmldom'
 import { HistoryService, OPERTATION_MODE, OPERTATION_TYPE, State } from './shared/historyService';
 import { Toolspace } from './toolspace';
 import store from "@/store";
-import { traverseNode } from '@vue/compiler-core';
+import { StateService } from './shared/stateService';
 
 
 var instance: Workspace;
@@ -27,6 +27,7 @@ export class Workspace implements Space {
     workbenchData!: {
         root: HTMLElement,
         element: HTMLElement,
+        prevStyle: string,
         previousSibling?: HTMLElement;
         previousParent?: HTMLElement;
 
@@ -45,7 +46,7 @@ export class Workspace implements Space {
         iframe.contentDocument?.body.setAttribute('oncontextmenu', 'return false');
         iframe.contentWindow?.focus();
 
-        this.testXmlDom();
+        //this.testXmlDom();
     }
     testXmlDom() {
 
@@ -177,8 +178,8 @@ export class Workspace implements Space {
         var template =
             `
         <template>
-        <div class="hello">lasdfsdfsdfljlj</div>
-        <Dial @click="handleit(h)" v-model:dt="data" ></Dial>
+        <div class="hello"><div></div></div>
+        <DialPo @click="handleit(h)" v-model:dt="data" ></DialPo>
         </div>
       </template>
 
@@ -188,6 +189,8 @@ export class Workspace implements Space {
         let tags = ["<a ", "<a>", "</a>", "<abbr>", "<abbr ", "</abbr>", "<acronym>", "<acronym ", "</acronym>", "<address>", "<address ", "</address>", "<applet>", "<applet ", "</applet>", "<area>", "<area ", "</area>", "<article>", "</article>", "<article ", "<aside>", "<aside ", "</aside>", "<audio>", "<audio ", "</audio>", "<b>", "</b>", "<base>", "<base ", "</base>", "<basefont>", "<basefont ", "</basefont>", "<bdi>", "</bdi>", "<bdi ", "<bdo>", "</bdo>", "<bdo ", "<big>", "<big ", "</big>", "<blockquote>", "<blockquote ", "</blockquote>", "<body>", "<body ", "</body>", "<br ", "<br />", "<br>", "<br/>", "</br>", "<button>", "<button ", "</button>", "<canvas>", "</canvas>", "<canvas ", "<caption>", "<caption ", "</caption>", "<center>", "<center ", "</center>", "<cite>", "<cite ", "</cite>", "<code>", "<code ", "</code>", "<col>", "<col ", "</col>", "<colgroup>", "<colgroup ", "</colgroup>", "<datalist>", "<datalist ", "</datalist>", "<dd>", "</dd>", "<dd ", "<del>", "<del ", "</del>", "<details>", "<details ", "</details>", "<dfn>", "</dfn>", "<dfn ", "<dialog>", "<dialog ", "</dialog>", "<dir>", "</dir>", "<dir ", "<div>", "<div ", "</div>", "<dl>", "</dl>", "<dl ", "<dt>", "</dt>", "<dt ", "<em>", "<em ", "</em>", "<embed>", "</embed>", "<embed ", "<fieldset>", "<fieldset ", "</fieldset>", "<figcaption>", "</figcaption>", "<figcaption ", "<figure>", "<figure ", "</figure>", "<font ", "</font>", "<font>", "<footer>", "</footer>", "<footer ", "<form>", "</form>", "<form ", "<frame>", "</frame>", "<frame ", "<frameset>", "<frameset ", "</frameset>", "<h1>", "</h1>", "<h1 ", "<h2>", "</h2>", "<h2 ", "<h3>", "</h3>", "<h3 ", "<h4>", "</h4>", "<h4 ", "<h5>", "</h5>", "<h5 ", "<h6>", "</h6>", "<h6 ", "<head>", "</head>", "<head ", "<header>", "<header ", "</header>", "<hr>", "<hr ", "</hr>", "<html>", "</html>", "<html ", "<i>", "</i>", "<iframe>", "<iframe ", "</iframe>", "<img>", "</img>", "<img ", "<input>", "</input>", "<input ", "<ins>", "<ins ", "</ins>", "</kbd>", "<kbd>", "<kbd ", "<label>", "<label ", "</label>", "<legend>", "<legend ", "</legend>", "<li ", "<li>", "</li>", "<link>", "<link ", "</link>", "<main>", "<main ", "</main>", "<map>", "</map>", "<map ", "<mark>", "</mark>", "<mark ", "<meta>", "</meta>", "<meta ", "<meter>", "</meter>", "<meter ", "<nav>", "</nav>", "<nav ", "<noframes>", "</noframes>", "<noframes ", "<noscript>", "<noscript ", "</noscript>", "<object>", "<object ", "</object>", "<ol>", "</ol>", "<ol ", "<optgroup>", "</optgroup>", "<optgroup ", "<option>", "</option>", "<option ", "<output>", "<output ", "</output>", "<p>", "</p>", "<p ", "<param>", "<param ", "</param>", "<pre>", "</pre>", "<pre ", "<progress>", "<progress ", "</progress>", "<q>", "</q>", "<q ", "<rp>", "</rp>", "<rp ", "<rt>", "<rt ", "</rt>", "<ruby>", "</ruby>", "<ruby ", "<s>", "</s>", "<s ", "<samp>", "</samp>", "<samp ", "<section>", "</section>", "<section ", "<select>", "</select>", "<select ", "<small>", "<small ", "</small>", "<source>", "</source>", "<source ", "<span>", "<span ", "</span>", "<strike>", "</strike>", "<strike ", "<strong>", "<strong ", "</strong>", "<style>", "</style>", "<style ", "<sub>", "<sub ", "</sub>", "<summary>", "</summary>", "<summary ", "<sup>", "<sup ", "</sup>", "<table ", "<table>", "</table>", "<tbody>", "</tbody>", "<tbody ", "<td>", "<td ", "</td>", "<textarea>", "<textarea ", "</textarea>", "<tfoot>", "</tfoot>", "<tfoot ", "<th>", "</th>", "<th ", "<thead>", "</thead>", "<thead ", "<time>", "<time ", "</time>", "<title>", "</title>", "<title ", "<tr>", "<tr ", "</tr>", "<track>", "</track>", "<track ", "<tt>", "</tt>", "<tt ", "<u>", "</u>", "<ul ", "<ul>", "</ul>", "<var>", "<var ", "</var>", "<video>", "</video>", "<video ", "<wbr>", "<wbr ", "</wbr>"]
 
         const templateRegex = /(<template(\s|\S)*<\/template>)/gm;
+        const tempBlockRegex = /(?<=<template[\s\S]*>)[\s\S]*(?=(<\/template))/gm;
+
         const importRegex = /(?<=<script)(>)(\s*)(?=(\s|\S))/gm;
         const addRegex = /(?<=<script>(\s|\S)*components:(\s)*)({)(\s*)/gm;
         const remXmlns = /[\w]*xmlns(\s|\S)*?"(\s|\S)*?"/gm;
@@ -223,7 +226,24 @@ export class Workspace implements Space {
         // source = source.replace(addRegex, "{" + "MessageBox" + ",");
         output = output.replace(remXmlns, "");
 
-        console.log(output);
+        //   console.log(output);
+
+
+        //////////////////////////////////////////////////////////////////////
+
+        let docparser = new DOMParser();
+        let doc = docparser.parseFromString(template.match(tempBlockRegex)![0], 'text/html')
+
+        for (let elt of doc.body.getElementsByTagNameNS('*', '*')) {
+            elt?.setAttribute("odin-id", "omo")
+            console.log(elt.attributes);
+
+        }
+
+
+        console.log()
+        console.log(doc.querySelector("[odin-id='omo']"));
+
 
 
 
@@ -275,7 +295,6 @@ export class Workspace implements Space {
         var start = [0, 0];
         var offset = [0, 0];
         var top = 0;
-        var color = "";
         var display = "";
 
         let startHtml: string
@@ -560,7 +579,8 @@ export class Workspace implements Space {
             if (elt.getAttribute("odin-locked") !== "true" && !(shiftDown || ctrlDown) && !editing) {
                 dragging = true;
                 currentDraggable = elt
-                this.toggleDropZone(currentDraggable, false, false)
+                if (elt.getAttribute("odin-component") !== "true")
+                    this.toggleDropZone(currentDraggable, false, false)
                 if (!this.selected.includes(elt)) {
                     this.selected.splice(0, this.selected.length)
                     this.selected.push(elt);
@@ -573,9 +593,8 @@ export class Workspace implements Space {
                 e.stopPropagation()
                 return false
             }
-
         },
-            //Make hook alpha
+
             true
         );
 
@@ -589,7 +608,8 @@ export class Workspace implements Space {
             e.stopPropagation()
             e.preventDefault()
             gs.clear()
-            this.toggleDropZone(currentDraggable!, false, true);
+            if (currentDraggable?.getAttribute("odin-component") !== "true")
+                this.toggleDropZone(currentDraggable!, false, true);
         }
 
         /**
@@ -602,20 +622,46 @@ export class Workspace implements Space {
             e.preventDefault()
             gs.clear()
 
-            if ((currentDropZoneElt != undefined) && (currentPlacement != undefined)) {
+            if ((currentDraggable !== undefined) && (currentDropZoneElt != undefined) && (currentPlacement != undefined)) {
 
+                let cde = (currentDropZoneElt as HTMLElement)
+                let pr = cde.parentElement!;
+
+                let cdeLocked = cde.getAttribute("odin-locked") == "true"
+                let prLocked = pr.getAttribute("odin-locked") == "true"
                 let source: HTMLElement
 
                 if (altDown) source = currentDraggable?.cloneNode(true) as HTMLElement
                 else source = currentDraggable as HTMLElement
 
-                if (!altDown) this.saveDomUpdateToHistory(currentDropZoneElt as HTMLElement, source, currentPlacement)
-                else this.saveDomCreateToHistory(currentDropZoneElt as HTMLElement, source, currentPlacement)
+                if (cde.id != "odin-workbench" && (!cdeLocked && !prLocked)) {
 
-                TemplateEditors.placeInDOM(currentDropZoneElt, source!, currentPlacement, altDown)
+                    if (!altDown) this.saveDomUpdateToHistory(currentDropZoneElt as HTMLElement, source, currentPlacement)
+                    else this.saveDomCreateToHistory(currentDropZoneElt as HTMLElement, source, currentPlacement)
 
-                currentPlacement = undefined;
-                currentDropZoneElt = undefined;
+                    TemplateEditors.placeInDOM(currentDropZoneElt, source!, currentPlacement, altDown)
+
+                    currentPlacement = undefined;
+                    currentDropZoneElt = undefined;
+                }
+            }
+
+            else if ((currentDraggable == undefined) && (currentDropZoneElt != undefined) && (currentPlacement != undefined)) {
+
+                let html = e.dataTransfer?.getData("text/html");
+                let cde = (currentDropZoneElt as HTMLElement)
+                let pr = cde.parentElement!;
+
+                let cdeLocked = cde.getAttribute("odin-locked") == "true"
+                let prLocked = pr.getAttribute("odin-locked") == "true"
+                e.dataTransfer?.clearData("text/html");
+                console.log(html);
+
+                if (html && cde.id != "odin-workbench" && (!cdeLocked && !prLocked)) {
+                    let elt = TemplateEditors.createInDOm(currentDropZoneElt, html, currentPlacement)
+                    elt.setAttribute("odin-id", this.generateID());
+                    this.saveDomCreateToHistory(currentDropZoneElt as HTMLElement, elt, currentPlacement)
+                }
             }
 
         }
@@ -1126,6 +1172,18 @@ export class Workspace implements Space {
 
     activateWorkBench(elt: HTMLElement) {
 
+        /**
+         * use cases:: isolate components, view scaled, edit small components.
+         */
+        if (elt.getAttribute("odin-component") == "true") {
+            this.toggleLock(elt, false, undefined, true);
+            if (store.state.currentScope !== elt.getAttribute("odin-id")) {
+                const id = elt.getAttribute("odin-id")
+                store.commit('setCurrentScope', id)
+                StateService.getInstance().updateScope()
+            }
+        }
+
         if (this.workbenchData && this.workbenchData.root && this.workbenchData.root.parentElement) {
             this.deactivateWorkBench()
         }
@@ -1149,19 +1207,23 @@ export class Workspace implements Space {
         left: 0px;
         transform: initial;
         transition: none;
+        margin: 0px;
         `
 
         const benchRoot = this.root.contentDocument?.createElement("section")!
-        benchRoot.setAttribute('style', benchStyle)
-        benchRoot.setAttribute('id', "odin-workbench")
-        elt.setAttribute('style', eltStyle)
+        const style = elt.getAttribute("style")? elt.getAttribute("style")! : "";
         this.workbenchData =
         {
             root: benchRoot,
+            prevStyle: style,
             element: elt,
             previousParent: elt.nextElementSibling ? undefined : elt.parentElement!,
             previousSibling: elt.nextElementSibling as HTMLElement
         }
+
+        benchRoot.setAttribute('style', benchStyle)
+        benchRoot.setAttribute('id', "odin-workbench")
+        elt.setAttribute('style', eltStyle)
 
 
         elt.remove()
@@ -1205,7 +1267,7 @@ export class Workspace implements Space {
 
             }
             else {
-                const del = 100
+                const del = 50
 
                 if (event.shiftKey) {
                     if (event.deltaY < 0)
@@ -1227,7 +1289,9 @@ export class Workspace implements Space {
         }, true)
 
         benchRoot.addEventListener('mousedown', event => {
+
             if (event.button == 1) {
+                elt.style.pointerEvents = "none";
                 mousedown = true;
                 x = event.clientX
                 y = event.clientY
@@ -1238,7 +1302,6 @@ export class Workspace implements Space {
             }
 
         })
-
         benchRoot.addEventListener('mousemove', event => {
 
             if (mousedown && scale > 0) {
@@ -1264,6 +1327,8 @@ export class Workspace implements Space {
         benchRoot.addEventListener('mouseup', event => {
             mousedown = false
             benchRoot.style.cursor = "initial"
+            elt.style.pointerEvents = "initial";
+
 
         })
         document.addEventListener('mouseup', event => {
@@ -1290,15 +1355,25 @@ export class Workspace implements Space {
     deactivateWorkBench() {
         let gs = Guidespace.getInstance()
 
-        if (this.workbenchData.root && this.workbenchData.root.parentElement) {
+        if (this.workbenchData && this.workbenchData.root && this.workbenchData.root.parentElement) {
+
+            if (this.workbenchData.element.getAttribute("odin-component") == "true") {
+                this.toggleLock(this.workbenchData.element, false, undefined, true);
+                store.commit('setCurrentScope', "app")
+                StateService.getInstance().updateScope()
+
+            }
+
+
             this.workbenchData.root.remove()
-            this.workbenchData.element.removeAttribute("style")
+            this.workbenchData.element.setAttribute("style", this.workbenchData.prevStyle)
             if (this.workbenchData.previousParent) {
                 this.workbenchData.previousParent.append(this.workbenchData.element)
             }
             else {
                 this.workbenchData.previousSibling?.before(this.workbenchData.element)
             }
+            StateService.getInstance().updateScope(true)
             gs.clear()
             gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
         }
@@ -1480,6 +1555,8 @@ export class Workspace implements Space {
     }
 
     saveDomCreateToHistory(relative: HTMLElement, element: HTMLElement, mode: PLACEMENT_MODE) {
+        console.log(element, relative, mode);
+
         switch (mode) {
             case PLACEMENT_MODE.BEFORE: {
 
@@ -1495,6 +1572,8 @@ export class Workspace implements Space {
                     }
                 }
                 this.historyService.push(state)
+
+
 
             }
 
@@ -1558,10 +1637,7 @@ export class Workspace implements Space {
                 this.historyService.push(state)
 
             }
-
-
                 break;
-
 
             case PLACEMENT_MODE.INSIDE_AFTER: {
 
@@ -1598,11 +1674,10 @@ export class Workspace implements Space {
         else
             return false
     }
-
-    toggleLock(elt: HTMLElement, single: boolean, setTrue?: boolean) {
+    toggleLock(elt: HTMLElement, single: boolean, setTrue?: boolean, partial?: boolean) {
 
         //toggle locked single
-        if (single && setTrue == undefined) {
+        if (single && setTrue == undefined && !partial) {
             this.setLock(elt)
             if (elt.getAttribute("odin-locked") == "true")
                 elt.setAttribute("odin-locked", "false")
@@ -1621,13 +1696,21 @@ export class Workspace implements Space {
 
             })
             //element itself
-            this.setLock(elt)
-            if (elt.getAttribute("odin-locked") == "true")
-                elt.setAttribute("odin-locked", "false")
-            else
-                elt.setAttribute("odin-locked", "true")
-
-
+            if (!partial) {
+                this.setLock(elt)
+                if (elt.getAttribute("odin-locked") == "true")
+                    elt.setAttribute("odin-locked", "false")
+                else
+                    elt.setAttribute("odin-locked", "true")
+            }
+            else {
+                if (elt.hasAttribute("dropzone")) {
+                    this.toggleDropZone(elt, true)
+                }
+                else {
+                    elt.setAttribute("dropzone", "false");
+                }
+            }
         }
         //turn on locked for one element
         else if (single && setTrue) {
@@ -1783,6 +1866,9 @@ export class Workspace implements Space {
             if (!this.validateElement(e as HTMLElement)) {
                 e.setAttribute("dropzone", "true")
                 e.setAttribute("draggable", "true")
+            }
+            if (e.getAttribute("odin-component") == "true") {
+                this.toggleLock(e as HTMLElement, false, undefined, true);
             }
         })
 

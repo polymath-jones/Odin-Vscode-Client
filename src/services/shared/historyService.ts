@@ -208,10 +208,7 @@ export class HistoryService {
 
         if (this.undoStack.length > 0) {
             const state = this.undoStack.pop()!
-            // console.log(state);
-
-            //update changes
-
+            
              
             switch (state.operationType) {
                  case OPERTATION_TYPE.DOM: {
@@ -328,13 +325,13 @@ export class HistoryService {
                          }
                          case OPERTATION_MODE.CREATE: {
                              const operands = state.operands as DomOperands
-                             if (operands.sibling) {
+                             if (operands.sibling && !operands.parent) {
                                  TemplateEditors.placeInDOM(operands.sibling, operands.element, PLACEMENT_MODE.BEFORE, false);
                              }
                              else {
                                  TemplateEditors.placeInDOM(operands.parent, operands.element, PLACEMENT_MODE.INSIDE, false);
  
-                             }
+                             }                             
                              break
                          }
                          case OPERTATION_MODE.UPDATE_TEXT: {

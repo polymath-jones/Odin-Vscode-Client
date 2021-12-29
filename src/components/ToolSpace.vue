@@ -13,6 +13,7 @@
         v-model:buttons="leftPaneButtons"
         :vertical="true"
         :spread="true"
+        @changed="handleLeftPanelButton"
       ></button-stack>
     </section>
     <section>
@@ -75,10 +76,11 @@
           collapsedAll: leftPaneClosed && rightPaneClosed,
         }"
       >
+        <!-- saaspal-free-lite -->
         <window-resizer>
           <iframe
             @load="loaded"
-            src="/saaspal-free-lite/index.html"
+            src="/index.html"
             id="workspace"
             frameborder="0"
             ref="workspace"
@@ -105,7 +107,7 @@
     <section class="panels-wrapper">
       <panel
         class="right-pane-panel"
-        @panelClosed="handlePanelClose"
+        @panelClosed="handleCSPanelClose"
         v-model:closed="customStylerClosed"
         heading="Customize Style"
         animation="opacity"
@@ -133,9 +135,9 @@
       </panel>
       <panel
         class="left-pane-panel"
-        @panelClosed="handlePanelClose"
-        :closed="true"
-        heading="Assets"
+        @panelClosed="handleAddPanelClose"
+        v-model:closed="panelClosed"
+        heading="Add"
         animation="opacity"
         glassed="true"
         :width="400"
@@ -143,6 +145,7 @@
         :glassed="true"
         fill="#3E3D40D6"
       >
+        <odin-catalogue></odin-catalogue>
       </panel>
       <panel
         class="left-pane-panel"
@@ -181,6 +184,7 @@ import OdinStyler from "./OdinStyler.vue";
 import ToolButton from "./ToolButton.vue";
 import ButtonStack from "./ButtonStack.vue";
 import WindowResizer from "./WindowResizer.vue";
+import OdinCatalogue from "./OdinCatalogue.vue";
 import Panel from "./Panel.vue";
 import store from "@/store";
 
@@ -195,6 +199,7 @@ import "prismjs/themes/prism-tomorrow.css";
     WindowResizer,
     ButtonStack,
     OdinStyler,
+    OdinCatalogue,
   },
 })
 export default class HelloWorld extends Vue {
@@ -231,7 +236,7 @@ export default class HelloWorld extends Vue {
   }
 
   beforeMount() {
-    StateService.init("");
+    StateService.init();
     this.stateService = StateService.getInstance();
 
     ToolStates.init();
@@ -251,13 +256,25 @@ export default class HelloWorld extends Vue {
     };
   }
   handleCustomStyler() {
-    this.customStylerClosed = false;
+    if (this.customStylerClosed) this.customStylerClosed = false;
+    else this.customStylerClosed = true;
+  }
+  handleLeftPanelButton(idx: number) {
+    if (idx == 0) {
+      console.log("opening panel");
+      if (this.panelClosed) this.panelClosed = false;
+    } else {
+      if (!this.panelClosed) {
+        this.panelClosed = true;
+      }
+    }
   }
   handleSave() {
     const sr = this.historyService.serializeStack(true);
     const storage = window.localStorage;
-
     storage.setItem("history", sr);
+    this.stateService.save();
+    Workspace.getInstance().deactivateWorkBench();
   }
   handleInputChange(code: any) {
     this.currentStyleSource = code.target.value as string;
@@ -270,11 +287,15 @@ export default class HelloWorld extends Vue {
   changeScreeButtonState(index: number) {
     this.toggleButtonStates(this.screenButtons, index);
   }
-  toggleButtonStates(states: Array<any>, index: number) {
+  toggleButtonStates(states: Array<any>, index: number, kill?: boolean) {
     for (let i = 0; i < states.length; i++) {
-      if (i == index) {
-        if (!states[index].state) {
-          states[index].state = true;
+      if (!kill) {
+        if (i == index) {
+          if (!states[index].state) {
+            states[index].state = true;
+          }
+        } else {
+          states[i].state = false;
         }
       } else {
         states[i].state = false;
@@ -314,7 +335,7 @@ export default class HelloWorld extends Vue {
         break;
       }
 
-       case "wide": {
+      case "wide": {
         store.commit("setWindowConstraints", {
           min: 1024,
           max: 1920,
@@ -323,8 +344,11 @@ export default class HelloWorld extends Vue {
       }
     }
   }
-  handlePanelClose() {
-    if (!this.panelClosed) this.panelClosed = true;
+  handleCSPanelClose() {
+    if (!this.customStylerClosed) this.panelClosed = true;
+  }
+  handleAddPanelClose() {
+    this.toggleButtonStates(this.leftPaneButtons, 0, true);
   }
   handlePaneToggle(data: any) {
     switch (data.id) {
@@ -351,13 +375,40 @@ export default class HelloWorld extends Vue {
     return this.prism.highlight(code, this.prism.languages.css, "css");
   }
   loaded() {
+    console.log("Iframe Loaded");
     this.root = this.$refs.workspace as HTMLIFrameElement;
     this.styleSheet = this.root.contentDocument!.createElement("style");
-    this.styleSheet.setAttribute("odin-id","odinStyleSheet");
+    this.styleSheet.setAttribute("odin-id", "odinStyleSheet");
     this.styleSheet.innerHTML = StateService.getInstance()
-      .getStyleParser()
+      ?.getStyleParser()
       .print() as string;
 
+    const staticStyleSheet = this.root.contentDocument!.createElement("style");
+    staticStyleSheet.innerHTML = `  html, body {
+            border: 0px;
+            margin: 0px;
+            padding: 0px;
+        }
+        body, .custom-scroll{
+            background-color: #57575B;
+        }
+        body::-webkit-scrollbar-track, .custom-scroll::-webkit-scrollbar-track  {
+            -webkit-box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.123);
+            background-color: #84828E;
+        }
+
+        body::-webkit-scrollbar, .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+            background-color: #84828E;
+        }
+
+        body::-webkit-scrollbar-thumb,  .custom-scroll::-webkit-scrollbar-thumb {
+            -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.205);
+            background-color: #313133;
+        }
+      `;
+
+    this.root.contentDocument?.body.append(staticStyleSheet);
     this.root.contentDocument?.body.append(this.styleSheet);
 
     Toolspace.init(this.root, this.styleSheet);
@@ -448,7 +499,7 @@ export default class HelloWorld extends Vue {
 }
 .left-pane,
 .right-pane {
-  padding: 2px 10px 16px;
+  padding: 2px 10px 10px;
   height: 100%;
   overflow: hidden;
 }
@@ -460,7 +511,7 @@ export default class HelloWorld extends Vue {
   position: relative;
   display: flex;
   flex-flow: column;
-  height: calc(100vh - 40px);
+  height: calc(100vh - 64px);
   max-width: calc(100vw - 374px);
   z-index: 99;
   border-radius: 10px;

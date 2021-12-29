@@ -15,6 +15,7 @@ export default createStore({
     },
     currentStyleSource: "",
     currentStyleState: "",
+    currentScope: "app",
     viewData: {
       panelsVisiblity: {
         left: true,
@@ -60,6 +61,9 @@ export default createStore({
     },
     setStyleState(state, payload) {
       state.currentStyleState = payload
+    },
+    setCurrentScope(state, payload) {
+      state.currentScope = payload
     }
   },
   actions: {

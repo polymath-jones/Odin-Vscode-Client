@@ -8,93 +8,171 @@
  * */
 
 import { StyleParser } from "../lib/styleParser";
-import * as xmlDom from 'xmldom';
 import { ScriptParser } from "../lib/scriptParser";
+import { TemplateParser } from "../lib/templateParser";
+import store from "@/store";
+import { ThisTypeNode } from "ts-morph";
 
 var instance: StateService;
+const templateBlockRegex = /(?<=<template[\s\S]*>)[\s\S]*(?=(<\/template))/gm;
+const scriptBlockRegex = /(?<=<script[\s\S]*>)[\s\S]*(?=(<\/script))/gm;
+const styleBlockRegex = /(?<=<style[\s\S]*>)[\s\S]*(?=(<\/style))/gm;
+const preludeRegex = /(?<=\/\*[\s\S]*ODIN)[\s\S]*(?=(\*\/))/g;
+const remXmlns = /[\w]*xmlns(\s|\S)*?"(\s|\S)*?"/gm;
+
 
 //depends on no services
 export class StateService {
 
     private styleParser!: StyleParser;
-    private xmlParser!: xmlDom.DOMParser;
+    private templateParser!: TemplateParser;
     private scriptParser!: ScriptParser;
 
-    private constructor(componentSource: string) {
-        this.deconstruct(componentSource);
+    private constructor() {
+
+         this.getRoot()
+        //this.deconstruct("")
 
     }
+    async getRoot() {
+        let src: string | undefined = undefined;
+        let response = await fetch(`http://localhost:3333/root`);
 
-    static init(componentSource: string) {
-        instance = new StateService(componentSource)
+
+        if (response.ok) {
+            let json = await response.json()
+            src = json.source;
+        } else {
+            throw new Error("Connection failed");
+        }
+
+        this.deconstruct(src!)
     }
-    update(componentSource: string) {
-        //override old states for new component scope
-        this.deconstruct(componentSource)
+
+    async getScope(id: string) {
+        let src: string | undefined = undefined;
+        let response = await fetch(`http://localhost:3333/component/${id}`);
+
+
+        if (response.ok) {
+            let json = await response.json()
+            src = json.source;
+        } else {
+            throw new Error("Connection failed");
+        }
+
+        this.deconstruct(src!)
     }
-    save() {
-        //parse asts and call emitters
+
+    updateScope(root?: boolean) {
+
+        if (!root) {
+            this.getScope(store.state.currentScope)
+        } else {
+            this.getRoot()
+        }
+    }
+
+    async save() {
+        let template = this.templateParser.print()
+        let script = this.scriptParser.print()
+        let style = this.styleParser.print()
+
+        let component =
+            `
+            <template> 
+                ${template}
+            </template>
+            
+            <script lang="ts">
+                ${script}
+            </script>
+
+            <style scoped>
+                ${style}
+            </style>
+        `;
+        const formatter = require("prettier/standalone");
+        const plugins = require("prettier/parser-html");
+
+        component = formatter.format(component, {
+            parser: "html",
+            plugins,
+        });
+
+        let data = {
+            source: component,
+            id: store.state.currentScope
+        }
+
+        let response = await fetch('http://localhost:3333/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+        if (response.ok) {
+            console.log(response);
+
+        } else {
+            throw new Error("Connection failed");
+        }
+
+
+        console.log(component)
     }
     deconstruct(src: string) {
-        this.styleParser = new StyleParser(`
 
+        const preludes = `
+
+    /*---------  ODIN RESPONSIVE QUERIES   ---------*/                         
         
-        .test:hover{
-            display: inline-block;
-            background: black !important;
-            padding: 40px;
-        }
-        html, body {
-            border: 0px;
-            margin: 0px;
-            padding: 0px;
-        }
-        body, .custom-scroll{
-            background-color: #57575B;
-        }
-        body::-webkit-scrollbar-track, .custom-scroll::-webkit-scrollbar-track  {
-            -webkit-box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.123);
-            background-color: #84828E;
-        }
+        @media screen and (max-width: 1200px){}
+        @media screen and (max-width: 825px) {}
+        @media screen and (max-width: 768px) {}
+        @media screen and (max-width: 425px) {}
 
-        body::-webkit-scrollbar, .custom-scroll::-webkit-scrollbar {
-            width: 8px;
-            background-color: #84828E;
-        }
+        `
 
-        body::-webkit-scrollbar-thumb,  .custom-scroll::-webkit-scrollbar-thumb {
-            -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.205);
-            background-color: #313133;
-        }
+        const template = `
+        <section>
+            <Dig v-bind:="on"></Dig>
+        </section>
+        `
 
+        const templateMatches = src.match(templateBlockRegex);
+        const scriptMatches = src.match(scriptBlockRegex);
+        const styleMatches = src.match(styleBlockRegex);
 
-        @media screen and (max-width: 1200px) {
-          
-        }
-        @media screen and (max-width: 825px) {
-          
-        }
-        @media screen and (max-width: 768px) {
-          
-        }
-        @media screen and (max-width: 425px) {
-          .go{
-              color: blue !important;
-              display: inline;
-          }
-        }
+        let templateBlock = templateMatches ? templateMatches[0] : "<div></div>"
+        let scriptBlock = scriptMatches ? scriptMatches[0] : "//empty script"
+        let styleBlock = styleMatches ? styleMatches[0] : preludes
 
-        `)
+        let addPrelude = styleBlock.match(preludeRegex) == null
+        styleBlock = addPrelude ? styleBlock + preludes : styleBlock
+
+        this.templateParser = new TemplateParser(templateBlock)
+        this.styleParser = new StyleParser(styleBlock)
+        this.scriptParser = new ScriptParser(scriptBlock)
+
+        // this.templateParser = new TemplateParser(template)
+        // this.styleParser = new StyleParser(preludes)
+        // this.scriptParser = new ScriptParser('console.log("script parser!!!")')
 
     }
     getStyleParser(): StyleParser {
         return this.styleParser;
     }
-    getXmlParser(): DOMParser {
-        return this.xmlParser
+    getTemplateParser(): TemplateParser {
+        return this.templateParser
     }
     getScriptParser(): ScriptParser {
         return this.scriptParser;
+    }
+
+    static init() {
+        instance = new StateService()
     }
     static getInstance() {
         return instance;

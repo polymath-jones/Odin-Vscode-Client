@@ -1,5 +1,5 @@
 <template>
-  
+  <div></div>
 </template>
 
 <script lang ="ts">
@@ -12,5 +12,7 @@ export default class ToggleButtonStack extends Vue {}
 </script>
 
 <style scoped>
-
+.nothing{
+  color: black;
+}
 </style>

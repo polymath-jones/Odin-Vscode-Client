@@ -153,8 +153,8 @@ export default class EditableSelect extends Vue {
         }
     });
   }
-  handleChange(value:any){
-    this.$emit("valueChanged",value)
+  handleChange(value: any) {
+    this.$emit("valueChanged", value);
   }
   handleKeyDown(e: KeyboardEvent) {
     if (e.key == "Escape" || e.key == "Enter") {
@@ -273,9 +273,10 @@ export default class EditableSelect extends Vue {
   padding: 8px;
   display: flex;
   align-items: center;
-  color: rgb(255, 255, 255);
 }
 .item-text {
+  color: rgba(255, 255, 255, 0.534);
+  transition: 0.2s;
   margin: 0px 16px;
 }
 .select-text {
@@ -297,6 +298,9 @@ export default class EditableSelect extends Vue {
 
 .select-item:hover {
   background-color: rgba(255, 255, 255, 0.068);
+}
+.select-item:hover > .item-text {
+  color: rgb(255, 255, 255);
 }
 .item-editor {
   width: 90%;

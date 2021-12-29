@@ -273,7 +273,7 @@ export class Guidespace implements Space {
 
         const offset = 0;
         this.context.strokeStyle = "#17f787";
-        if (elt.getAttribute('draggable') !== 'true' || elt.getAttribute('odin-locked') == 'true') {
+        if (elt.getAttribute('dropzone') !== 'true'||elt.getAttribute('draggable') !== 'true' || elt.getAttribute('odin-locked') == 'true') {
             this.context.strokeStyle = "#ff9500";
         }
         this.context.lineWidth = 2;

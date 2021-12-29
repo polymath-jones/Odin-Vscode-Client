@@ -30,7 +30,6 @@ export class StyleParser {
     constructor(src: string) {
         try {
             this.styleSheet = this.parser.parse(src);
-            console.log(this.get(false,".test::after",undefined))
         }
         catch (e) {
             console.log(e);
