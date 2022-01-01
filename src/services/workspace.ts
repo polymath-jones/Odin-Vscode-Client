@@ -376,6 +376,12 @@ export class Workspace implements Space {
             if (currentEditable && elt != currentEditable) {
 
                 if (startHtml !== currentEditable.innerHTML) {
+
+                    const doc = StateService.getInstance().getTemplateParser().getDocument();
+                    const id = currentEditable.getAttribute("odin-id")
+                    const elt =  doc.querySelector(`[odin-id="${id}"]`)
+
+                    elt!.innerHTML! = currentEditable.innerHTML
                     this.saveDomTextUpdateToHistory(currentEditable, startHtml, currentEditable.innerHTML)
                 }
 
@@ -1177,8 +1183,8 @@ export class Workspace implements Space {
          */
         if (elt.getAttribute("odin-component") == "true") {
             this.toggleLock(elt, false, undefined, true);
-            if (store.state.currentScope !== elt.getAttribute("odin-id")) {
-                const id = elt.getAttribute("odin-id")
+            if (store.state.currentScope !== elt.getAttribute("component-id")) {
+                const id = elt.getAttribute("component-id")
                 store.commit('setCurrentScope', id)
                 StateService.getInstance().updateScope()
             }

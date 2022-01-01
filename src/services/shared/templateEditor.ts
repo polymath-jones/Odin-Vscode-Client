@@ -1,4 +1,5 @@
 import { PLACEMENT_MODE } from "../guidespace"
+import { Workspace } from "../workspace";
 import { StateService } from "./stateService";
 export namespace TemplateEditors {
 
@@ -7,6 +8,7 @@ export namespace TemplateEditors {
         var div = document.createElement('div');
         div.innerHTML = native.trim();
         var element = div.firstChild as HTMLElement;
+        element.setAttribute("odin-id", Workspace.getInstance().generateID());
 
         const doc = StateService.getInstance().getTemplateParser().getDocument()
         const tempRelative = getTemplateElement(doc, relative as HTMLElement)
@@ -29,7 +31,7 @@ export namespace TemplateEditors {
                 var tempElt = element?.cloneNode(true)
 
                 relative.after(elt!)
-                tempRelative?.before(tempElt!)
+                tempRelative?.after(tempElt!)
                 element = elt as HTMLElement
 
                 break;
@@ -188,12 +190,12 @@ export namespace TemplateEditors {
     // get element from ast
     export function getTemplateElement(doc: Document, elt: HTMLElement): HTMLElement | null {
 
-        if(elt){
+        if (elt) {
             let id = elt.getAttribute("odin-id")
-        let element = doc.querySelector(`[odin-id="${id}"]`)
-        return element as HTMLElement
+            let element = doc.querySelector(`[odin-id="${id}"]`)
+            return element as HTMLElement
         }
         return null
-        
+
     }
 }

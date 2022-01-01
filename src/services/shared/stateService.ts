@@ -81,15 +81,15 @@ export class StateService {
         let component =
             `
             <template> 
-                ${template}
+            ${template}
             </template>
             
             <script lang="ts">
-                ${script}
+            ${script}
             </script>
 
             <style scoped>
-                ${style}
+            ${style}
             </style>
         `;
         const formatter = require("prettier/standalone");

@@ -177,8 +177,8 @@ import { StateService } from "../services/shared/stateService";
 import { HistoryService } from "../services/shared/historyService";
 import { Guidespace } from "../services/guidespace";
 import { Toolspace } from "../services/toolspace";
-
 import { ToolStates } from "../services/shared/toolStates";
+
 import ToggleButton from "./ToggleButton.vue";
 import OdinStyler from "./OdinStyler.vue";
 import ToolButton from "./ToolButton.vue";
@@ -236,9 +236,7 @@ export default class HelloWorld extends Vue {
   }
 
   beforeMount() {
-    StateService.init();
-    this.stateService = StateService.getInstance();
-
+    
     ToolStates.init();
     this.toolStates = ToolStates.getInstance();
 
@@ -375,7 +373,12 @@ export default class HelloWorld extends Vue {
     return this.prism.highlight(code, this.prism.languages.css, "css");
   }
   loaded() {
+    
     console.log("Iframe Loaded");
+
+    StateService.init();
+    this.stateService = StateService.getInstance();
+
     this.root = this.$refs.workspace as HTMLIFrameElement;
     this.styleSheet = this.root.contentDocument!.createElement("style");
     this.styleSheet.setAttribute("odin-id", "odinStyleSheet");
