@@ -11,7 +11,8 @@ export default createStore({
       "flex-shrink": undefined,
       "flex-wrap": undefined,
       "float": undefined,
-      "padding": undefined
+      "padding": undefined,
+      "margin": undefined,
     },
     currentStyleSource: "",
     currentStyleState: "",

@@ -379,7 +379,7 @@ export class Workspace implements Space {
 
                     const doc = StateService.getInstance().getTemplateParser().getDocument();
                     const id = currentEditable.getAttribute("odin-id")
-                    const elt =  doc.querySelector(`[odin-id="${id}"]`)
+                    const elt = doc.querySelector(`[odin-id="${id}"]`)
 
                     elt!.innerHTML! = currentEditable.innerHTML
                     this.saveDomTextUpdateToHistory(currentEditable, startHtml, currentEditable.innerHTML)
@@ -665,248 +665,236 @@ export class Workspace implements Space {
 
                 if (html && cde.id != "odin-workbench" && (!cdeLocked && !prLocked)) {
                     let elt = TemplateEditors.createInDOm(currentDropZoneElt, html, currentPlacement)
-                    elt.setAttribute("odin-id", this.generateID());
                     this.saveDomCreateToHistory(currentDropZoneElt as HTMLElement, elt, currentPlacement)
                 }
             }
 
         }
+        iframe.contentDocument!.addEventListener('dragover', (e) => {
 
-        iframe.contentDocument!.querySelectorAll('*').forEach((e) => {
-            var elt = e as HTMLElement;
+            let elt = e.target as HTMLElement
+            var isbody = false;
+            e.stopPropagation()
+            e.preventDefault();
 
-            /**
-             * @ondragover hook calculates and finds valid placement positions for currentDraggable.
-             * Also draws placement and context guides using the Guidespace
-             */
-            elt.ondragover = (e) => {
+            const rect = elt.getBoundingClientRect();
+            var mousePercents = this.getMousePercents(e, rect);
+            const threshold = 5
 
-                var isbody = false;
-                e.stopPropagation()
-                e.preventDefault();
+            currentPlacement = undefined;
+            currentDropZoneElt = undefined;
 
-                const rect = elt.getBoundingClientRect();
-                var mousePercents = this.getMousePercents(e, rect);
-                const threshold = 5
-
-                currentPlacement = undefined;
-                currentDropZoneElt = undefined;
-
-                //Inside element
-                if ((mousePercents.x > threshold && mousePercents.x < 100 - threshold)
-                    && (mousePercents.y > threshold && mousePercents.y < 100 - threshold) && !this.validateElement(elt)) {
+            //Inside element
+            if ((mousePercents.x > threshold && mousePercents.x < 100 - threshold)
+                && (mousePercents.y > threshold && mousePercents.y < 100 - threshold) && !this.validateElement(elt)) {
 
 
-                    //Empty elements
-                    if (elt.innerHTML == "") {
-                        gs.clear()
-                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                        gs.drawSelected([elt], SELECTION_MODE.HIGHLIGHT)
+                //Empty elements
+                if (elt.innerHTML == "") {
+                    gs.clear()
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                    gs.drawSelected([elt], SELECTION_MODE.HIGHLIGHT)
+                    if (elt.getAttribute('dropzone') == 'true') {
+                        currentDropZoneElt = elt
+                        currentPlacement = PLACEMENT_MODE.INSIDE
+                    }
+                }
+                //Element with only text
+                else if (elt.children.length == 0) {
+                    gs.clear()
+                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                    gs.drawSelected([elt], SELECTION_MODE.HIGHLIGHT)
+
+                    mousePercents = this.getMousePercents(e, elt.getBoundingClientRect())
+
+                    if (mousePercents.y < 50) {
+
                         if (elt.getAttribute('dropzone') == 'true') {
                             currentDropZoneElt = elt
-                            currentPlacement = PLACEMENT_MODE.INSIDE
+                            currentPlacement = PLACEMENT_MODE.INSIDE_BEFORE
                         }
                     }
-                    //Element with only text
-                    else if (elt.children.length == 0) {
-                        gs.clear()
-                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                        gs.drawSelected([elt], SELECTION_MODE.HIGHLIGHT)
-
-                        mousePercents = this.getMousePercents(e, elt.getBoundingClientRect())
-
-                        if (mousePercents.y < 50) {
-
-                            if (elt.getAttribute('dropzone') == 'true') {
-                                currentDropZoneElt = elt
-                                currentPlacement = PLACEMENT_MODE.INSIDE_BEFORE
-                            }
-                        }
-                        else {
-                            if (elt.getAttribute('dropzone') == 'true') {
-                                currentDropZoneElt = elt
-                                currentPlacement = PLACEMENT_MODE.INSIDE_AFTER
-                            }
-                        }
-
-                    }
-                    //Inside element with child elements
                     else {
+                        if (elt.getAttribute('dropzone') == 'true') {
+                            currentDropZoneElt = elt
+                            currentPlacement = PLACEMENT_MODE.INSIDE_AFTER
+                        }
+                    }
 
-                        const closestChild = this.findClosestElement(elt, e.clientX, e.clientY)
+                }
+                //Inside element with child elements
+                else {
 
-                        mousePercents = this.getMousePercents(e, closestChild.getBoundingClientRect())
-                        const display = this.getDisplayType(closestChild);
-                        orientation = (display == 'inline' || display == 'inline-block')
+                    const closestChild = this.findClosestElement(elt, e.clientX, e.clientY)
 
-                        if (!closestChild.isSameNode(currentDraggable!)) {
-                            if (!orientation) {
-                                if (mousePercents.y < 50) {
-                                    gs.clear()
-                                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                                    gs.drawPlacement(closestChild, PLACEMENT_MODE.BEFORE)
-                                    if (elt.getAttribute('dropzone') == 'true') {
-                                        currentDropZoneElt = closestChild
-                                        currentPlacement = PLACEMENT_MODE.BEFORE
-                                    }
-                                }
-                                else {
-                                    gs.clear()
-                                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                                    gs.drawPlacement(closestChild, PLACEMENT_MODE.AFTER)
-                                    if (elt.getAttribute('dropzone') == 'true') {
-                                        currentDropZoneElt = closestChild
-                                        currentPlacement = PLACEMENT_MODE.AFTER
-                                    }
+                    mousePercents = this.getMousePercents(e, closestChild.getBoundingClientRect())
+                    const display = this.getDisplayType(closestChild);
+                    orientation = (display == 'inline' || display == 'inline-block')
+
+                    if (!closestChild.isSameNode(currentDraggable!)) {
+                        if (!orientation) {
+                            if (mousePercents.y < 50) {
+                                gs.clear()
+                                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                                gs.drawPlacement(closestChild, PLACEMENT_MODE.BEFORE)
+                                if (elt.getAttribute('dropzone') == 'true') {
+                                    currentDropZoneElt = closestChild
+                                    currentPlacement = PLACEMENT_MODE.BEFORE
                                 }
                             }
-
                             else {
-                                if (mousePercents.x < 50) {
-                                    gs.clear()
-                                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                                    gs.drawPlacement(closestChild, PLACEMENT_MODE.BEFORE_LEFT)
-                                    if (elt.getAttribute('dropzone') == 'true') {
-                                        currentDropZoneElt = closestChild
-                                        currentPlacement = PLACEMENT_MODE.BEFORE
-                                    }
+                                gs.clear()
+                                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                                gs.drawPlacement(closestChild, PLACEMENT_MODE.AFTER)
+                                if (elt.getAttribute('dropzone') == 'true') {
+                                    currentDropZoneElt = closestChild
+                                    currentPlacement = PLACEMENT_MODE.AFTER
                                 }
-                                else {
-                                    gs.clear()
-                                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                                    gs.drawPlacement(closestChild, PLACEMENT_MODE.AFTER_RIGHT)
-                                    if (elt.getAttribute('dropzone') == 'true') {
-                                        currentDropZoneElt = closestChild
-                                        currentPlacement = PLACEMENT_MODE.AFTER
-                                    }
-                                }
-                            }
-
-                        }
-                    }
-
-
-
-                }
-
-                //element boudaries of left and top
-                else if ((mousePercents.x <= threshold) || (mousePercents.y <= threshold)) {
-
-                    var valid
-                    var orientation
-                    if (mousePercents.y <= mousePercents.x) {
-                        //top zone
-                        valid = this.findValidParent(elt, GUIDE_DIRECTION.TOP)
-                    }
-                    else {
-                        //left zone
-                        valid = this.findValidParent(elt, GUIDE_DIRECTION.LEFT)
-                    }
-
-                    if (["body", "html"].includes(valid!.tagName.toLowerCase())) {
-                        valid = iframe.contentDocument?.body.firstElementChild
-                        isbody = true
-                    }
-
-
-
-                    //decide
-                    valid = valid! as HTMLElement
-                    mousePercents = this.getMousePercents(e, valid.getBoundingClientRect())
-                    const display = this.getDisplayType(valid);
-                    orientation = (display == 'inline' || display == 'inline-block')
-
-                    if (!valid.isSameNode(currentDraggable!)) {
-                        if (!orientation) {
-                            gs.clear()
-                            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                            gs.drawPlacement(valid, PLACEMENT_MODE.BEFORE)
-                            if (isbody) {
-                                currentDropZoneElt = valid
-                                currentPlacement = PLACEMENT_MODE.BEFORE
-                            }
-                            if (elt.parentElement!.getAttribute('dropzone') == 'true') {
-                                currentDropZoneElt = valid
-                                currentPlacement = PLACEMENT_MODE.BEFORE
                             }
                         }
 
                         else {
-                            gs.clear()
-                            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                            gs.drawPlacement(valid, PLACEMENT_MODE.BEFORE_LEFT);
-                            if (isbody) {
-                                currentDropZoneElt = valid
-                                currentPlacement = PLACEMENT_MODE.BEFORE
+                            if (mousePercents.x < 50) {
+                                gs.clear()
+                                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                                gs.drawPlacement(closestChild, PLACEMENT_MODE.BEFORE_LEFT)
+                                if (elt.getAttribute('dropzone') == 'true') {
+                                    currentDropZoneElt = closestChild
+                                    currentPlacement = PLACEMENT_MODE.BEFORE
+                                }
                             }
-                            if (elt.parentElement!.getAttribute('dropzone') == 'true') {
-                                currentDropZoneElt = valid
-                                currentPlacement = PLACEMENT_MODE.BEFORE
+                            else {
+                                gs.clear()
+                                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                                gs.drawPlacement(closestChild, PLACEMENT_MODE.AFTER_RIGHT)
+                                if (elt.getAttribute('dropzone') == 'true') {
+                                    currentDropZoneElt = closestChild
+                                    currentPlacement = PLACEMENT_MODE.AFTER
+                                }
                             }
                         }
 
                     }
                 }
 
-                //element boudaries of right and bottom
-                else if ((mousePercents.x >= 100 - threshold) || (mousePercents.y >= 100 - threshold)) {
-                    var valid
-                    if (mousePercents.y >= mousePercents.x) {
-                        valid = this.findValidParent(elt, GUIDE_DIRECTION.BOTTOM)
-                    }
-                    else {
-                        valid = this.findValidParent(elt, GUIDE_DIRECTION.RIGHT)
-                    }
-                    if (["body", "html"].includes(valid!.tagName.toLowerCase())) {
-                        valid = iframe.contentDocument?.body.lastElementChild;
-                        isbody = true;
-                    }
-
-                    //decide
-                    valid = valid! as HTMLElement
-                    mousePercents = this.getMousePercents(e, valid.getBoundingClientRect())
-                    const display = this.getDisplayType(valid);
-                    orientation = (display == 'inline' || display == 'inline-block')
-
-                    if (!valid.isSameNode(currentDraggable!)) {
-                        //horizontal
-                        if (!orientation) {
-                            gs.clear()
-                            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                            gs.drawPlacement(valid, PLACEMENT_MODE.AFTER)
-                            if (isbody) {
-                                currentDropZoneElt = valid
-                                currentPlacement = PLACEMENT_MODE.AFTER
-                            }
-                            else if (elt.parentElement!.getAttribute('dropzone') == 'true') {
-                                currentDropZoneElt = valid
-                                currentPlacement = PLACEMENT_MODE.AFTER
-                            }
-                        }
-                        else {
-                            gs.clear()
-                            gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                            gs.drawPlacement(valid, PLACEMENT_MODE.AFTER_RIGHT)
-                            if (isbody) {
-                                currentDropZoneElt = valid
-                                currentPlacement = PLACEMENT_MODE.AFTER
-                            }
-                            else if (elt.parentElement!.getAttribute('dropzone') == 'true') {
-                                currentDropZoneElt = valid
-                                currentPlacement = PLACEMENT_MODE.AFTER
-                            }
-                        }
-                    }
-                }
 
 
             }
-        });
-        /**
-         * @keydown hook handles key events to set modifier
-         * flags, handle element locking and handle Parent selecting
-         */
-        iframe.contentDocument!.addEventListener("keydown", (e: KeyboardEvent) => {
+
+            //element boudaries of left and top
+            else if ((mousePercents.x <= threshold) || (mousePercents.y <= threshold)) {
+
+                var valid
+                var orientation
+                if (mousePercents.y <= mousePercents.x) {
+                    //top zone
+                    valid = this.findValidParent(elt, GUIDE_DIRECTION.TOP)
+                }
+                else {
+                    //left zone
+                    valid = this.findValidParent(elt, GUIDE_DIRECTION.LEFT)
+                }
+
+                if (["body", "html"].includes(valid!.tagName.toLowerCase())) {
+                    valid = iframe.contentDocument?.body.firstElementChild
+                    isbody = true
+                }
+
+
+
+                //decide
+                valid = valid! as HTMLElement
+                mousePercents = this.getMousePercents(e, valid.getBoundingClientRect())
+                const display = this.getDisplayType(valid);
+                orientation = (display == 'inline' || display == 'inline-block')
+
+                if (!valid.isSameNode(currentDraggable!)) {
+                    if (!orientation) {
+                        gs.clear()
+                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                        gs.drawPlacement(valid, PLACEMENT_MODE.BEFORE)
+                        if (isbody) {
+                            currentDropZoneElt = valid
+                            currentPlacement = PLACEMENT_MODE.BEFORE
+                        }
+                        if (elt.parentElement!.getAttribute('dropzone') == 'true') {
+                            currentDropZoneElt = valid
+                            currentPlacement = PLACEMENT_MODE.BEFORE
+                        }
+                    }
+
+                    else {
+                        gs.clear()
+                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                        gs.drawPlacement(valid, PLACEMENT_MODE.BEFORE_LEFT);
+                        if (isbody) {
+                            currentDropZoneElt = valid
+                            currentPlacement = PLACEMENT_MODE.BEFORE
+                        }
+                        if (elt.parentElement!.getAttribute('dropzone') == 'true') {
+                            currentDropZoneElt = valid
+                            currentPlacement = PLACEMENT_MODE.BEFORE
+                        }
+                    }
+
+                }
+            }
+
+            //element boudaries of right and bottom
+            else if ((mousePercents.x >= 100 - threshold) || (mousePercents.y >= 100 - threshold)) {
+                var valid
+                if (mousePercents.y >= mousePercents.x) {
+                    valid = this.findValidParent(elt, GUIDE_DIRECTION.BOTTOM)
+                }
+                else {
+                    valid = this.findValidParent(elt, GUIDE_DIRECTION.RIGHT)
+                }
+                if (["body", "html"].includes(valid!.tagName.toLowerCase())) {
+                    valid = iframe.contentDocument?.body.lastElementChild;
+                    isbody = true;
+                }
+
+                //decide
+                valid = valid! as HTMLElement
+                mousePercents = this.getMousePercents(e, valid.getBoundingClientRect())
+                const display = this.getDisplayType(valid);
+                orientation = (display == 'inline' || display == 'inline-block')
+
+                if (!valid.isSameNode(currentDraggable!)) {
+                    //horizontal
+                    if (!orientation) {
+                        gs.clear()
+                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                        gs.drawPlacement(valid, PLACEMENT_MODE.AFTER)
+                        if (isbody) {
+                            currentDropZoneElt = valid
+                            currentPlacement = PLACEMENT_MODE.AFTER
+                        }
+                        else if (elt.parentElement!.getAttribute('dropzone') == 'true') {
+                            currentDropZoneElt = valid
+                            currentPlacement = PLACEMENT_MODE.AFTER
+                        }
+                    }
+                    else {
+                        gs.clear()
+                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+                        gs.drawPlacement(valid, PLACEMENT_MODE.AFTER_RIGHT)
+                        if (isbody) {
+                            currentDropZoneElt = valid
+                            currentPlacement = PLACEMENT_MODE.AFTER
+                        }
+                        else if (elt.parentElement!.getAttribute('dropzone') == 'true') {
+                            currentDropZoneElt = valid
+                            currentPlacement = PLACEMENT_MODE.AFTER
+                        }
+                    }
+                }
+            }
+
+
+        }, true)
+
+        let keydownHook = (e: KeyboardEvent) => {
 
             if (e.shiftKey && !shiftDown) {
                 shiftDown = true;
@@ -925,7 +913,7 @@ export class Workspace implements Space {
                     gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
                 }
             }
-            else if (e.key === "Delete") {
+            else if (e.key === "Delete" || e.key == "Backspace") {
                 this.selected.forEach(elt => {
                     this.saveDomDeleteToHistory(elt)
                     TemplateEditors.deleteInDOM(elt)
@@ -1016,9 +1004,9 @@ export class Workspace implements Space {
                     dkeyDown = true
                     this.selected.forEach(elt => {
                         if (elt && elt.parentElement) {
-                            const dup = elt.cloneNode(true)
-                            this.saveDomCreateToHistory(elt, dup as HTMLElement, PLACEMENT_MODE.AFTER)
-                            elt.after(dup)
+
+                            const dup = TemplateEditors.createInDOm(elt, elt.textContent!, PLACEMENT_MODE.AFTER)
+                            this.saveDomCreateToHistory(elt, dup, PLACEMENT_MODE.AFTER)
 
                         }
                     })
@@ -1027,12 +1015,8 @@ export class Workspace implements Space {
                 gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
             }
         }
-        );
-        /**
-         * @keyup hook handles key events to set modifier
-         * flags
-         */
-        iframe.contentDocument!.addEventListener("keyup", (e: KeyboardEvent) => {
+
+        let keyUpHook = (e: KeyboardEvent) => {
             if (shiftDown && !e.shiftKey) {
                 shiftDown = false;
             } else if (!e.ctrlKey && ctrlDown) {
@@ -1055,124 +1039,30 @@ export class Workspace implements Space {
             else if (wkeyDown && e.key === "w") {
                 wkeyDown = false;
             }
-        });
-
-        document.addEventListener("keydown", (e: KeyboardEvent) => {
-
-            if (e.shiftKey && !shiftDown) {
-                shiftDown = true;
-            } else if (e.ctrlKey && !ctrlDown) {
-                ctrlDown = true;
-            } else if (e.altKey && !altDown) {
-                altDown = true;
-            }
-            else if (e.key === "z" && ctrlDown) {
-                if (!editing) {
-                    e.preventDefault();
-                    if (altDown) {
-                        this.historyService.redo();
-                    } else this.historyService.undo();
-                    gs.clear();
-                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT);
-                }
-            }
-            /* else if (e.key === "Delete") {
-                this.selected.forEach(elt => {
-                    this.saveDomDeleteToHistory(elt)
-                    TemplateEditors.deleteInDOM(elt)
-                });
-                gs.clear()
-                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-            } */
-            else if (!lkeyDown && e.key === "l") {
-
-                if (ctrlDown && !altDown) {
-                    e.preventDefault()
-                    lkeyDown = true
-
-                    this.selected.forEach(elt => {
-                        if (!elt.hasAttribute("odin-locked"))
-                            elt.setAttribute('odin-locked', 'false')
-                        this.toggleLock(elt, true);
-                        this.toggleDropZone(elt, true)
-                    })
-                    gs.clear()
-                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-
-                }
-                //lock element and children
-                else if (ctrlDown && altDown) {
-                    e.preventDefault()
-                    lkeyDown = true
-
-                    if (this.selected.length > 1)
-                        console.log(' locking does not work with multiselection');
-                    var elt = this.selected[0]
-                    if (elt) {
-                        if (!elt.hasAttribute("odin-locked"))
-                            elt.setAttribute('odin-locked', 'false')
-                        this.toggleLock(elt, false);
-                        this.toggleDropZone(elt, false)
-                    }
-                    gs.clear()
-                    gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                }
-            }
-            else if (!pkeyDown && e.key === "p") {
-
-
-                //parent selecting
-                if (ctrlDown && this.selected.length == 1) {
-                    e.preventDefault()
-                    pkeyDown = true
-                    var elt = this.selected[0]
-                    if (elt && elt.parentElement) {
-                        this.selected[0] = elt.parentElement;
-                        gs.clear()
-                        gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-                    }
-                }
-            }
-            else if (!dkeyDown && e.key === "d") {
-
-
-                //duplicate element
-                if (ctrlDown) {
-                    e.preventDefault()
-                    dkeyDown = true
-                    this.selected.forEach(elt => {
-                        if (elt && elt.parentElement) {
-                            const dup = elt.cloneNode(true)
-                            this.saveDomCreateToHistory(elt, dup as HTMLElement, PLACEMENT_MODE.AFTER)
-                            elt.after(dup)
-
-                        }
-                    })
-                }
-                gs.clear()
-                gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
-            }
         }
+
+        /**
+         * @keydown hook handles key events to set modifier
+         * flags, handle element locking and handle Parent selecting
+         */
+        iframe.contentDocument!.addEventListener("keydown",
+            keydownHook
+        );
+        /**
+         * @keyup hook handles key events to set modifier
+         * flags
+         */
+        iframe.contentDocument!.addEventListener("keyup",
+            keyUpHook
         );
 
-        document.addEventListener("keyup", (e: KeyboardEvent) => {
-            if (shiftDown && !e.shiftKey) {
-                shiftDown = false;
-            } else if (!e.ctrlKey && ctrlDown) {
-                ctrlDown = false;
-            } else if (!e.altKey && altDown) {
-                altDown = false;
-            }
-            else if (lkeyDown && e.key === "l") {
-                lkeyDown = false;
-            }
-            else if (pkeyDown && e.key === "p") {
-                pkeyDown = false;
-            }
-            else if (dkeyDown && e.key === "d") {
-                dkeyDown = false;
-            }
-        });
+        document.addEventListener("keydown",
+            keydownHook
+        );
+
+        document.addEventListener("keyup",
+            keyUpHook
+        );
 
     }
 
@@ -1182,7 +1072,7 @@ export class Workspace implements Space {
          * use cases:: isolate components, view scaled, edit small components.
          */
         if (elt.getAttribute("odin-component") == "true") {
-            this.toggleLock(elt, false, undefined, true);
+            this.toggleLock(elt, false, false, true);
             if (store.state.currentScope !== elt.getAttribute("component-id")) {
                 const id = elt.getAttribute("component-id")
                 store.commit('setCurrentScope', id)
@@ -1217,7 +1107,7 @@ export class Workspace implements Space {
         `
 
         const benchRoot = this.root.contentDocument?.createElement("section")!
-        const style = elt.getAttribute("style")? elt.getAttribute("style")! : "";
+        const style = elt.getAttribute("style") ? elt.getAttribute("style")! : "";
         this.workbenchData =
         {
             root: benchRoot,
@@ -1245,10 +1135,28 @@ export class Workspace implements Space {
         let scaleStyle = ""
         let transformStyle = ""
         let scale = 1
+        let spaceDown = false
 
         elt.addEventListener('mousedown', e => {
             if (e.button == 1)
                 benchRoot.style.cursor = "grab"
+        }, true)
+
+        this.root.contentWindow?.addEventListener('keydown', e => {
+
+            if (e.code == "Space" && this.workbenchData.root.parentElement) {
+                if (!spaceDown)
+                    spaceDown = true
+                benchRoot.style.cursor = "grab"
+                e.preventDefault();
+            }
+        }, true)
+        this.root.contentWindow?.addEventListener('keyup', e => {
+            if (e.code == "Space") {
+                if (spaceDown)
+                    spaceDown = false
+                    benchRoot.style.cursor = "initial"
+            }
         }, true)
 
         benchRoot.addEventListener('wheel', event => {
@@ -1305,6 +1213,15 @@ export class Workspace implements Space {
                 event.preventDefault()
                 event.stopPropagation()
 
+            }
+            if (event.button == 0 && spaceDown) {
+                elt.style.pointerEvents = "none";
+                benchRoot.style.cursor = "grab"
+                mousedown = true;
+                x = event.clientX
+                y = event.clientY
+                event.preventDefault()
+                event.stopPropagation()
             }
 
         })
@@ -1364,7 +1281,7 @@ export class Workspace implements Space {
         if (this.workbenchData && this.workbenchData.root && this.workbenchData.root.parentElement) {
 
             if (this.workbenchData.element.getAttribute("odin-component") == "true") {
-                this.toggleLock(this.workbenchData.element, false, undefined, true);
+                this.toggleLock(this.workbenchData.element, false, true, true);
                 store.commit('setCurrentScope', "app")
                 StateService.getInstance().updateScope()
 
@@ -1727,7 +1644,7 @@ export class Workspace implements Space {
 
         }
         //turn off locked for one element
-        else if (single && !setTrue) {
+        else if (single && setTrue == undefined) {
             this.setLock(elt)
             if (elt.getAttribute("odin-locked") == "true") {
                 elt.setAttribute("odin-locked", "false")
@@ -1741,24 +1658,24 @@ export class Workspace implements Space {
                     elt.setAttribute("odin-locked", "true")
                 }
             })
-            //element itself
-            this.setLock(elt)
-            if (elt.getAttribute("odin-locked") !== "true") {
+            if (!partial) {
                 elt.setAttribute("odin-locked", "true")
+            } else {
+                elt.setAttribute("dropzone", "false");
             }
+
+
             //turn off locked for element and children    
         } else if (!single && !setTrue) {
 
             elt.querySelectorAll("*").forEach((elt) => {
-                this.setLock(elt as HTMLElement)
-                if (elt.getAttribute("odin-locked") == "true") {
-                    elt.setAttribute("odin-locked", "false")
-                }
+                elt.setAttribute("odin-locked", "false")
             })
             //element itself
-            this.setLock(elt)
-            if (elt.getAttribute("odin-locked") == "true") {
+            if (!partial) {
                 elt.setAttribute("odin-locked", "false")
+            } else {
+                elt.setAttribute("dropzone", "true");
             }
         }
     }
@@ -1792,50 +1709,26 @@ export class Workspace implements Space {
         }
         //turn on dropzone for one element
         else if (single && setTrue) {
-            if (elt.hasAttribute("dropzone")) {
-                if (elt.getAttribute("dropzone") !== "true") {
-                    elt.setAttribute("dropzone", "true")
-                }
-            }
+            elt.setAttribute("dropzone", "true")
         }
         //turn off dropzone for one element
         else if (single && !setTrue) {
-            if (elt.hasAttribute("dropzone")) {
-                if (elt.getAttribute("dropzone") == "true") {
-                    elt.setAttribute("dropzone", "false")
-                }
-            }
+            elt.setAttribute("dropzone", "false")
             //turn on dropzone for element and children
         } else if (!single && setTrue) {
             elt.querySelectorAll("*").forEach((elt) => {
-                if (elt.hasAttribute("dropzone")) {
-                    if (elt.getAttribute("dropzone") !== "true") {
-                        elt.setAttribute("dropzone", "true")
-                    }
-                }
+                elt.setAttribute("dropzone", "true")
             })
 
-            if (elt.hasAttribute("dropzone")) {
-                if (elt.getAttribute("dropzone") !== "true") {
-                    elt.setAttribute("dropzone", "true")
-                }
-            }
+            elt.setAttribute("dropzone", "true")
             //turn off dropzone for element and children    
         } else if (!single && !setTrue) {
 
             elt.querySelectorAll("*").forEach((elt) => {
-                if (elt.hasAttribute("dropzone")) {
-                    if (elt.getAttribute("dropzone") == "true") {
-                        elt.setAttribute("dropzone", "false")
-                    }
-                }
-            })
+                elt.setAttribute("dropzone", "false")
 
-            if (elt.hasAttribute("dropzone")) {
-                if (elt.getAttribute("dropzone") == "true") {
-                    elt.setAttribute("dropzone", "false")
-                }
-            }
+            })
+            elt.setAttribute("dropzone", "false")
         }
     }
 

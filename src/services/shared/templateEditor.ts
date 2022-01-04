@@ -13,6 +13,7 @@ export namespace TemplateEditors {
         const doc = StateService.getInstance().getTemplateParser().getDocument()
         const tempRelative = getTemplateElement(doc, relative as HTMLElement)
 
+        console.log(tempRelative);
         switch (mode) {
             case PLACEMENT_MODE.BEFORE: {
 
@@ -41,8 +42,9 @@ export namespace TemplateEditors {
                 var elt = element?.cloneNode(true)
                 var tempElt = element?.cloneNode(true)
 
-                var element = relative as HTMLElement
-                element.append(elt!)
+                var rel = relative as HTMLElement
+                rel.append(elt!)
+
                 tempRelative?.append(tempElt)
                 element = elt as HTMLElement
 
@@ -66,8 +68,8 @@ export namespace TemplateEditors {
                 var elt = element?.cloneNode(true)
                 var tempElt = element?.cloneNode(true)
 
-                var element = relative as HTMLElement
-                element.append(elt!)
+                var rel = relative as HTMLElement
+                rel.append(elt!)
                 tempRelative?.append(tempElt)
                 element = elt as HTMLElement
 
@@ -169,16 +171,12 @@ export namespace TemplateEditors {
                     tempSource?.remove()
                     tempRelative?.append(tempSource!)
 
-
-
                 } else {
 
                     var rel = relative as HTMLElement
                     rel.append(source!)
 
                     tempRelative?.append(tempSource!)
-
-
                 }
                 break;
             }
@@ -190,12 +188,19 @@ export namespace TemplateEditors {
     // get element from ast
     export function getTemplateElement(doc: Document, elt: HTMLElement): HTMLElement | null {
 
-        if (elt) {
-            let id = elt.getAttribute("odin-id")
-            let element = doc.querySelector(`[odin-id="${id}"]`)
-            return element as HTMLElement
+        let elementF!: HTMLElement | null;
+
+        let id = elt.getAttribute("odin-component");
+        let element = doc.querySelector(`[odin-component="${id}"]`) as (HTMLElement | null)
+        elementF = element
+
+        if (!element) {
+            let id = elt.getAttribute("odin-id");
+            let element = doc.querySelector(`[odin-id="${id}"]`) as (HTMLElement | null)
+            elementF = element
         }
-        return null
+
+        return elementF
 
     }
 }

@@ -12,6 +12,7 @@ import { ScriptParser } from "../lib/scriptParser";
 import { TemplateParser } from "../lib/templateParser";
 import store from "@/store";
 import { ThisTypeNode } from "ts-morph";
+import { LoggerService } from "./loggerService";
 
 var instance: StateService;
 const templateBlockRegex = /(?<=<template[\s\S]*>)[\s\S]*(?=(<\/template))/gm;
@@ -30,8 +31,8 @@ export class StateService {
 
     private constructor() {
 
-         this.getRoot()
-        //this.deconstruct("")
+        this.getRoot()
+       // this.deconstruct("")
 
     }
     async getRoot() {
@@ -45,7 +46,7 @@ export class StateService {
         } else {
             throw new Error("Connection failed");
         }
-
+        LoggerService.getInstance().log("Root Source fetched")
         this.deconstruct(src!)
     }
 
@@ -71,12 +72,14 @@ export class StateService {
         } else {
             this.getRoot()
         }
+        //this.deconstruct("")
     }
 
     async save() {
+
         let template = this.templateParser.print()
         let script = this.scriptParser.print()
-        let style = this.styleParser.print()
+        let style = this.styleParser.print(true)
 
         let component =
             `
@@ -94,7 +97,7 @@ export class StateService {
         `;
         const formatter = require("prettier/standalone");
         const plugins = require("prettier/parser-html");
-
+        
         component = formatter.format(component, {
             parser: "html",
             plugins,
@@ -135,17 +138,11 @@ export class StateService {
 
         `
 
-        const template = `
-        <section>
-            <Dig v-bind:="on"></Dig>
-        </section>
-        `
-
         const templateMatches = src.match(templateBlockRegex);
         const scriptMatches = src.match(scriptBlockRegex);
         const styleMatches = src.match(styleBlockRegex);
 
-        let templateBlock = templateMatches ? templateMatches[0] : "<div></div>"
+        let templateBlock = templateMatches ? templateMatches[0] : "<div draggable ></div>"
         let scriptBlock = scriptMatches ? scriptMatches[0] : "//empty script"
         let styleBlock = styleMatches ? styleMatches[0] : preludes
 
@@ -156,9 +153,6 @@ export class StateService {
         this.styleParser = new StyleParser(styleBlock)
         this.scriptParser = new ScriptParser(scriptBlock)
 
-        // this.templateParser = new TemplateParser(template)
-        // this.styleParser = new StyleParser(preludes)
-        // this.scriptParser = new ScriptParser('console.log("script parser!!!")')
 
     }
     getStyleParser(): StyleParser {

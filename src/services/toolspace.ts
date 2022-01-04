@@ -178,6 +178,7 @@ export class Toolspace implements Space {
                 "flex-wrap": undefined,
                 "float": undefined,
                 "padding": undefined,
+                "margin": undefined,
             }
 
 

@@ -22,7 +22,6 @@
 </template>
 
 <script lang ="ts">
-import { Workspace } from "@/services/workspace";
 import { Options, Vue } from "vue-class-component";
 import store from "@/store";
 import ResizeObserver from "resize-observer-polyfill";
@@ -136,14 +135,13 @@ export default class WindowResizer extends Vue {
   margin: auto;
   display: flex;
   height: 100%;
-  background-color: #ffffff;
   border-radius: 10px;
 }
 .resizer-handle {
-    background-color: #1e1e1e;
+  background-color: #262729;
   display: flex;
   align-items: center;
-  border-radius: 0px 10px 0px 0px;
+  border-radius: 0px 10px 10px 0px;
 }
 .resizer-screen {
   cursor: w-resize;

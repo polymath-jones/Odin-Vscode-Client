@@ -88,6 +88,10 @@ export class HistoryService {
         HistoryService.instance = new HistoryService();
 
     }
+    clear(){
+        this.undoStack.splice(0);
+        this.redoStack.splice(0);
+    }
     push(state: State) {
         if (this.undoStack.length > MAX_SAVES)
             this.undoStack.splice(0, 1)
@@ -119,7 +123,9 @@ export class HistoryService {
                             "parent",
                             "previousParent"].includes(operand)) {
                             const odinID = operands[operand] as string
-                            const elt = Workspace.getInstance().getRoot().contentDocument?.querySelector(`[odin-id="${odinID.trim()}"]`)
+                            console.log(odinID);
+                            
+                            let elt = Workspace.getInstance().getRoot().contentDocument?.querySelector(`[odin-id="${odinID.trim()}"]`)
                             operands[operand] = elt
                         }
                     })

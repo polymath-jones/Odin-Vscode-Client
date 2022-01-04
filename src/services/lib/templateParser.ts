@@ -17,6 +17,12 @@ export class TemplateParser {
 
     print(): string {
 
+        this.document.querySelectorAll("[dropzone],[draggable],[odin-locked]").forEach(elt=>{
+            elt.removeAttribute("dropzone")
+            elt.removeAttribute("draggable")
+            elt.removeAttribute("odin-locked")
+        })
+
         let root = this.document.body.innerHTML
         let matches = root.match(/(?<=(<[\s]*)|(<\/[\s]*))(\w)*/gm)
 

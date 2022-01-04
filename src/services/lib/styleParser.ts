@@ -56,30 +56,30 @@ export class StyleParser {
 
         const sortedSelList = this.formatSelector(ruleSelectors);
         if (!mediaPrelude) {
-            
 
-                this.styleSheet.getRules().forEach((rule: any) => {
 
-                    if ((rule instanceof this.AST.Rule)) {
+            this.styleSheet.getRules().forEach((rule: any) => {
 
-                        var sels = rule.getSelectors()
-                        var decs = rule.getDeclarations()
-                        var sortedSels = this.formatSelector(sels.toString())
-                        var eq = sortedSelList == sortedSels
-                        if (eq) {
-                            decs.forEach((dec: any) => {
+                if ((rule instanceof this.AST.Rule)) {
 
-                                if (dec.getNameAsString() == declaration) {
+                    var sels = rule.getSelectors()
+                    var decs = rule.getDeclarations()
+                    var sortedSels = this.formatSelector(sels.toString())
+                    var eq = sortedSelList == sortedSels
+                    if (eq) {
+                        decs.forEach((dec: any) => {
 
-                                    dec.setValue(newValue);
-                                }
-                            })
-                        }
+                            if (dec.getNameAsString() == declaration) {
 
+                                dec.setValue(newValue);
+                            }
+                        })
                     }
-                });
 
-            
+                }
+            });
+
+
         } else {
             //media queries update
             this.styleSheet.getRules().forEach((rule: any) => {
@@ -137,7 +137,7 @@ export class StyleParser {
                                 decs.forEach((dec: any) => {
 
                                     if (dec.getNameAsString() == declaration) {
-                                        
+
                                         value = objectType ? dec : dec.getValue().getText() as string
 
                                     }
@@ -191,7 +191,7 @@ export class StyleParser {
                 let value: object | undefined = undefined
 
                 if (!mediaPrelude) {
-                    
+
                     this.styleSheet.getRules().forEach((rule: any) => {
 
                         if ((rule instanceof this.AST.Rule)) {
@@ -288,7 +288,7 @@ export class StyleParser {
                 //both declarations and selectors
                 else {
                     console.log(newSelectors);
-                    
+
                     this.styleSheet.insertRule(
                         new this.AST.Rule(
                             this.parser.parseSelectors(newSelectors),
@@ -505,7 +505,7 @@ export class StyleParser {
             if (!mediaPrelude) {
                 //delete rule
                 const sortedSelList = this.formatSelector(ruleSelectors)
-                
+
 
                 const rules = this.styleSheet.getChildren()[0].getChildren()
 
@@ -697,9 +697,11 @@ export class StyleParser {
 
         }
     }
-    print(): string | void {
-        let src = this.PrettyPrinter.beautify(this.styleSheet);
-        store.commit('setStyleSource',src)
+    print(clean?: boolean): string | void {
+        let src = this.PrettyPrinter.beautify(this.styleSheet) as string;
+        if (clean)
+            src = src.replace("!important", "");
+        store.commit('setStyleSource', src)
         return src
     }
 }

@@ -189,6 +189,7 @@ import Panel from "./Panel.vue";
 import store from "@/store";
 
 import "prismjs/themes/prism-tomorrow.css";
+import { LoggerService } from "@/services/shared/loggerService";
 
 @Options({
   props: {},
@@ -207,10 +208,11 @@ export default class HelloWorld extends Vue {
   styleSheet!: HTMLStyleElement;
   root!: HTMLIFrameElement;
 
-  panelClosed = false;
+  panelClosed = true;
   leftPaneClosed = false;
   rightPaneClosed = false;
   customStylerClosed = true;
+  firstLoad = false;
 
   stateService!: StateService;
   historyService!: HistoryService;
@@ -236,7 +238,10 @@ export default class HelloWorld extends Vue {
   }
 
   beforeMount() {
-    
+    LoggerService.init();
+    StateService.init();
+    this.stateService = StateService.getInstance();
+
     ToolStates.init();
     this.toolStates = ToolStates.getInstance();
 
@@ -271,8 +276,10 @@ export default class HelloWorld extends Vue {
     const sr = this.historyService.serializeStack(true);
     const storage = window.localStorage;
     storage.setItem("history", sr);
+    this.historyService.clear();
     this.stateService.save();
     Workspace.getInstance().deactivateWorkBench();
+
   }
   handleInputChange(code: any) {
     this.currentStyleSource = code.target.value as string;
@@ -373,11 +380,9 @@ export default class HelloWorld extends Vue {
     return this.prism.highlight(code, this.prism.languages.css, "css");
   }
   loaded() {
-    
     console.log("Iframe Loaded");
-
-    StateService.init();
-    this.stateService = StateService.getInstance();
+    if (!this.firstLoad) StateService.getInstance().updateScope(true);
+    this.firstLoad = false;
 
     this.root = this.$refs.workspace as HTMLIFrameElement;
     this.styleSheet = this.root.contentDocument!.createElement("style");
@@ -387,12 +392,14 @@ export default class HelloWorld extends Vue {
       .print() as string;
 
     const staticStyleSheet = this.root.contentDocument!.createElement("style");
-    staticStyleSheet.innerHTML = `  html, body {
+    staticStyleSheet.innerHTML = `  
+        html, body {
             border: 0px;
             margin: 0px;
             padding: 0px;
+            background-color: #ffffff;
         }
-        body, .custom-scroll{
+        .custom-scroll{
             background-color: #57575B;
         }
         body::-webkit-scrollbar-track, .custom-scroll::-webkit-scrollbar-track  {

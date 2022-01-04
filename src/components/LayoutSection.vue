@@ -1,6 +1,6 @@
 <template>
   <div>
-    <p class="display-label">Display</p>
+    <p class="display-label">Display Test</p>
     <button-stack
       :styled="true"
       fill="#4D4C51"
@@ -9,12 +9,25 @@
       :wide="true"
       @changed="handleDisplayChange"
     ></button-stack>
-    <p class="display-label">Padding</p>
-    <input-dial
-      v-model:value="paddingValue"
-      style="margin-bottom: 20px"
-      @valueChanged="handlePaddingChange"
-    ></input-dial>
+
+    <div style="display: flex">
+      <div style="margin-right: 20px">
+        <p class="display-label">Padding Test</p>
+        <input-dial
+          v-model:value="paddingValue"
+          style="margin-bottom: 20px"
+          @valueChanged="handlePaddingChange"
+        ></input-dial>
+      </div>
+      <div>
+        <p class="display-label">Margin Test</p>
+        <input-dial
+          v-model:value="marginValue"
+          style="margin-bottom: 20px"
+          @valueChanged="handleMarginChange"
+        ></input-dial>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -33,7 +46,8 @@ import InputDial from "./InputDial.vue";
 export default class LayoutSection extends Vue {
   displayButtons = [{ id: "", source: "", state: false, placeholder: "" }];
   paddingValue = 0;
-  uiUpdate = false
+  marginValue = 0;
+  uiUpdate = false;
 
   get display(): any {
     return store.state.data.display;
@@ -41,6 +55,9 @@ export default class LayoutSection extends Vue {
 
   get padding(): any {
     return store.state.data.padding;
+  }
+  get margin(): any {
+    return store.state.data.margin;
   }
 
   beforeMount() {
@@ -62,6 +79,15 @@ export default class LayoutSection extends Vue {
         this.uiUpdate = true;
       }
     });
+    this.$watch("margin", (value: any, old: any) => {
+      if (value) {
+        let num = Number.parseFloat(value.replace(/[^\d-.]/g, ""));
+        num = Number.parseFloat(num.toFixed(1));
+
+        this.marginValue = num;
+        this.uiUpdate = true;
+      }
+    });
   }
 
   toggleButtonStates(states: Array<any>, index: number) {
@@ -78,6 +104,13 @@ export default class LayoutSection extends Vue {
   handlePaddingChange(data: { value: number; unit: string }) {
     Toolspace.getInstance().updateStyle({
       declartion: "padding",
+      value: data.value + data.unit,
+      precedence: false,
+    });
+  }
+  handleMarginChange(data: { value: number; unit: string }) {
+    Toolspace.getInstance().updateStyle({
+      declartion: "margin",
       value: data.value + data.unit,
       precedence: false,
     });
