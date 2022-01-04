@@ -191,7 +191,8 @@ export class HistoryService {
                         declaration: ops.declaration,
                         selector: ops.selector,
                         rule: ops.rule,
-                        oldValue: ops.oldValue,
+                        oldValue: ops.oldValue.replace("!important", ""),
+                        newValue: ops.newValue.replace("!important", ""),
                         stylesheet: "odinStyleSheet",
                         mediaPrelude: ops.mediaPrelude,
                     }

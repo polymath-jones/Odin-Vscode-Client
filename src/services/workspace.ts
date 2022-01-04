@@ -914,12 +914,18 @@ export class Workspace implements Space {
                 }
             }
             else if (e.key === "Delete" || e.key == "Backspace") {
+
                 this.selected.forEach(elt => {
-                    this.saveDomDeleteToHistory(elt)
-                    TemplateEditors.deleteInDOM(elt)
+                    if (!editing && elt.getAttribute("odin-locked") !== "true") {
+                        this.saveDomDeleteToHistory(elt)
+                        TemplateEditors.deleteInDOM(elt)
+                    }
+
                 });
                 gs.clear()
                 gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
+
+
             }
             else if (!lkeyDown && e.key === "l") {
 
@@ -978,6 +984,28 @@ export class Workspace implements Space {
                 gs.clear()
                 gs.drawSelected(this.selected, SELECTION_MODE.MULTISELECT)
                 this.deactivateWorkBench()
+
+                if (currentEditable) {
+
+                    if (startHtml !== currentEditable.innerHTML) {
+    
+                        const doc = StateService.getInstance().getTemplateParser().getDocument();
+                        const id = currentEditable.getAttribute("odin-id")
+                        const elt = doc.querySelector(`[odin-id="${id}"]`)
+    
+                        elt!.innerHTML! = currentEditable.innerHTML
+                        this.saveDomTextUpdateToHistory(currentEditable, startHtml, currentEditable.innerHTML)
+                    }
+    
+                    editing = false;
+                    Workspace.getInstance().toggleDraggable(currentEditable, true);
+                    currentEditable.setAttribute("contenteditable", "false");
+                    currentEditable.style.display = display;
+                    currentEditable.style.cursor = "initial";
+                    currentEditable = undefined;
+    
+    
+                }
             }
 
             else if (!pkeyDown && e.key === "p") {
@@ -1005,7 +1033,7 @@ export class Workspace implements Space {
                     this.selected.forEach(elt => {
                         if (elt && elt.parentElement) {
 
-                            const dup = TemplateEditors.createInDOm(elt, elt.textContent!, PLACEMENT_MODE.AFTER)
+                            let dup = TemplateEditors.createInDOm(elt, elt.outerHTML!, PLACEMENT_MODE.AFTER)
                             this.saveDomCreateToHistory(elt, dup, PLACEMENT_MODE.AFTER)
 
                         }
@@ -1155,7 +1183,7 @@ export class Workspace implements Space {
             if (e.code == "Space") {
                 if (spaceDown)
                     spaceDown = false
-                    benchRoot.style.cursor = "initial"
+                benchRoot.style.cursor = "initial"
             }
         }, true)
 

@@ -32,8 +32,7 @@ export class StateService {
     private constructor() {
 
         this.getRoot()
-       // this.deconstruct("")
-
+        //this.deconstruct("")   
     }
     async getRoot() {
         let src: string | undefined = undefined;
@@ -97,7 +96,7 @@ export class StateService {
         `;
         const formatter = require("prettier/standalone");
         const plugins = require("prettier/parser-html");
-        
+
         component = formatter.format(component, {
             parser: "html",
             plugins,
